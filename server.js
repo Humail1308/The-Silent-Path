@@ -9,10 +9,10 @@ const mongoose = require('mongoose'); // Database ke liye
 
 // --- 1. CONFIGURATION (Yahan Apni Keys Daalo) ---
 // Note: Inko baad mai .env file mai rakhna secure rehta hai
-const MONGO_URI = "YOUR_MONGODB_CONNECTION_STRING"; // MongoDB Atlas se mili hui link
-const TWITTER_CLIENT_ID = "YOUR_X_CLIENT_ID";       // X Portal se mili ID
-const TWITTER_CLIENT_SECRET = "YOUR_X_CLIENT_SECRET"; // X Portal se mila Secret
-const CALLBACK_URL = "http://127.0.0.1:3000/auth/twitter/callback"; // Hosting par change karna hoga
+const MONGO_URI = "mongodb+srv://admin:gamepass123@cluster0.vt2bcgt.mongodb.net/?appName=Cluster0"; // MongoDB Atlas se mili hui link
+const TWITTER_CLIENT_ID = "WXUtSHNWQXZFWjBwVnhXb3Q3SzE6MTpjaQ";       // X Portal se mili ID
+const TWITTER_CLIENT_SECRET = "7rcARBgNcQosk1CeDbFqjQozmT3ZfUqLcVrovto0kSWselI1fU"; // X Portal se mila Secret
+const CALLBACK_URL = "https://the-silent-path.onrender.com/auth/twitter/callback"; // Hosting par change karna hoga
 
 // --- 2. DATABASE CONNECTION ---
 mongoose.connect(MONGO_URI)
