@@ -35,11 +35,19 @@ const Player = mongoose.model('Player', playerSchema);
 app.use(express.static('public'));
 app.use(express.json());
 
+// ➤ FIX 1: Render Proxy Trust Enable karo (Zaroori hai for Secure Cookies on Render)
+app.set('trust proxy', 1);
+
 app.use(session({
     secret: 'silent_path_super_secret', // Kuch bhi random likh do
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // HTTPS par true karna hota hai (Render par handle hojata hai)
+    proxy: true, // Zaroori hai Render ke liye
+    cookie: { 
+        secure: true, // HTTPS (Render) par zaroori hai
+        sameSite: 'none', // Cross-site auth ke liye helpful
+        maxAge: 24 * 60 * 60 * 1000 // 1 day validity
+    }
 }));
 
 app.use(passport.initialize());
