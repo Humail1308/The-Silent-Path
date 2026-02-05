@@ -1,0 +1,22 @@
+{
+  "name": "the-silent-path-2d",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "mongoose": "^9.1.6",
+    "passport": "^0.7.0",
+    "passport-twitter-oauth2": "^2.1.1",
+    "socket.io": "^4.8.3"
+  }
+}
