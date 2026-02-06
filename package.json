@@ -17,7 +17,7 @@
     "express-session": "^1.19.0",
     "mongoose": "^9.1.6",
     "passport": "^0.7.0",
-    "passport-twitter-oauth2": "^2.1.1",
+    "passport-twitter": "^1.0.4",
     "socket.io": "^4.8.3"
   }
 }
