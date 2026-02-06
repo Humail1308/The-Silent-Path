@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session'); // Session manage karne ke liye
 const passport = require('passport'); // X Auth ke liye
 const TwitterStrategy = require('passport-twitter-oauth2').Strategy;
+const MongoStore = require('connect-mongo'); // --- NEW: Session Store ---
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
@@ -41,8 +42,13 @@ app.set('trust proxy', 1);
 app.use(session({
     secret: 'silent_path_super_secret', // Kuch bhi random likh do
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: false, // Changed to false for efficiency with MongoStore
     proxy: true, // Zaroori hai Render ke liye
+    // --- NEW: Store Session in MongoDB instead of RAM ---
+    store: MongoStore.create({ 
+        mongoUrl: MONGO_URI,
+        collectionName: 'sessions' // DB mai aik naya folder banega 'sessions'
+    }),
     cookie: { 
         secure: true, // HTTPS (Render) par zaroori hai
         sameSite: 'none', // Cross-site auth ke liye helpful
@@ -98,13 +104,20 @@ app.get('/auth/twitter', passport.authenticate('twitter'));
 
 // X Login ke baad wapis yahan ayega
 app.get('/auth/twitter/callback', 
-    passport.authenticate('twitter', { failureRedirect: '/' }),
+    passport.authenticate('twitter', { 
+        failureRedirect: '/',
+        keepSessionInfo: true // Session preserve karo redirect par
+    }),
     (req, res) => {
         // Popup window ko band karo aur main game ko batao ke login hogya
         res.send(`
             <script>
-                window.opener.postMessage({ type: 'AUTH_SUCCESS', user: ${JSON.stringify(req.user)} }, '*');
-                window.close();
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'AUTH_SUCCESS', user: ${JSON.stringify(req.user)} }, '*');
+                    window.close();
+                } else {
+                    window.location.href = '/';
+                }
             </script>
         `);
     }
