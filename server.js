@@ -13,8 +13,8 @@ const mongoose = require('mongoose');
 const MONGO_URI = "mongodb+srv://admin:gamepass123@cluster0.vt2bcgt.mongodb.net/?appName=Cluster0";
 
 // ⚠️ IMPORTANT: Yahan Discord ki 'Client ID' aur 'Client Secret' dalni hai
-const DISCORD_CLIENT_ID = 1475608001229619411; 
-const DISCORD_CLIENT_SECRET = XcMn-oRVXMXDpk5GwG8g7vqIicqRc-lS; 
+const DISCORD_CLIENT_ID = "1475608001229619411"; 
+const DISCORD_CLIENT_SECRET = "XcMn-oRVXMXDpk5GwG8g7vqIicqRc-lS"; 
 const CALLBACK_URL = "https://the-silent-path.onrender.com/auth/discord/callback";
 
 // --- 2. DATABASE CONNECTION (Anti-Crash) ---
