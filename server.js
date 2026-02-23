@@ -1,41 +1,39 @@
 const express = require('express');
-const session = require('express-session'); // Session manage karne ke liye
-const passport = require('passport'); // X Auth ke liye
-// --- CHANGE: Using Stable OAuth 1.0a Strategy ---
-const TwitterStrategy = require('passport-twitter').Strategy; 
-const MongoStore = require('connect-mongo'); // Session Store
+const session = require('express-session');
+const passport = require('passport');
+// --- CHANGE: Using Discord Strategy ---
+const DiscordStrategy = require('passport-discord').Strategy; 
+const MongoStore = require('connect-mongo');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const mongoose = require('mongoose'); // Database ke liye
+const mongoose = require('mongoose');
 
 // --- 1. CONFIGURATION ---
 const MONGO_URI = "mongodb+srv://admin:gamepass123@cluster0.vt2bcgt.mongodb.net/?appName=Cluster0";
 
-// ⚠️ IMPORTANT: Yahan 'API Key' aur 'API Key Secret' dalni hai (Consumer Keys)
-// X Developer Portal > Keys and Tokens > Consumer Keys section se milegi.
-const TWITTER_CONSUMER_KEY = "MIH6r2HoSthx62lUIXGnewU8O"; 
-const TWITTER_CONSUMER_SECRET = "YOTJNKmhLXJ3XGdWhnUxZetGo5NgRntX1HqUxKEqMmqSzXI6gWA"; 
-const CALLBACK_URL = "https://the-silent-path.onrender.com/auth/twitter/callback";
+// ⚠️ IMPORTANT: Yahan Discord ki 'Client ID' aur 'Client Secret' dalni hai
+const DISCORD_CLIENT_ID = 1475608001229619411; 
+const DISCORD_CLIENT_SECRET = XcMn-oRVXMXDpk5GwG8g7vqIicqRc-lS; 
+const CALLBACK_URL = "https://the-silent-path.onrender.com/auth/discord/callback";
 
 // --- 2. DATABASE CONNECTION (Anti-Crash) ---
 mongoose.connect(MONGO_URI)
     .then(() => console.log("✅ MongoDB Connected (Permanent Storage)"))
-    .catch(err => console.error("❌ MongoDB Connection Error (Server running without DB):", err));
+    .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-// Database connection error listener (Runtime crashes rokne ke liye)
 mongoose.connection.on('error', err => {
     console.error("❌ DB Runtime Error:", err);
 });
 
-// User Schema (Database Design)
+// User Schema (Updated for Discord)
 const playerSchema = new mongoose.Schema({
-    xId: { type: String, required: true, unique: true }, // Twitter ki unique ID
-    username: String, // @handle
-    displayName: String, // Screen Name
-    score: { type: Number, default: 0 }, // High Score
-    totalOrbs: { type: Number, default: 0 }, // Total Orbs
-    wallet: { type: String, default: null } // Phantom Wallet
+    discordId: { type: String, required: true, unique: true }, // Discord ID
+    username: String, // Discord handle (e.g. user#1234 or user)
+    displayName: String, // Global Name
+    score: { type: Number, default: 0 }, 
+    totalOrbs: { type: Number, default: 0 }, 
+    wallet: { type: String, default: null } 
 });
 
 const Player = mongoose.model('Player', playerSchema);
@@ -44,7 +42,6 @@ const Player = mongoose.model('Player', playerSchema);
 app.use(express.static('public'));
 app.use(express.json());
 
-// ➤ Render Proxy Trust Enable (Critical for Auth)
 app.set('trust proxy', 1);
 
 app.use(session({
@@ -53,20 +50,19 @@ app.use(session({
     saveUninitialized: false,
     store: MongoStore.create({ 
         mongoUrl: MONGO_URI,
-        collectionName: 'sessions', // DB mai sessions ka folder
+        collectionName: 'sessions',
         ttl: 24 * 60 * 60 // 1 Day expiry
     }),
     cookie: { 
-        secure: true, // HTTPS (Render) par zaroori hai
-        sameSite: 'none', // Cross-site auth ke liye helpful (X to Render)
-        maxAge: 24 * 60 * 60 * 1000 // 1 day validity
+        secure: true, 
+        sameSite: 'none', 
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Passport: User ko session mai save/load karna
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
     try {
@@ -75,27 +71,26 @@ passport.deserializeUser(async (id, done) => {
     } catch (err) { done(err, null); }
 });
 
-// --- 4. X (TWITTER) STRATEGY (OAuth 1.0a) ---
-passport.use(new TwitterStrategy({
-    consumerKey: TWITTER_CONSUMER_KEY,       // <-- Note: Variable name changed
-    consumerSecret: TWITTER_CONSUMER_SECRET, // <-- Note: Variable name changed
-    callbackURL: CALLBACK_URL
-}, async (token, tokenSecret, profile, done) => {
+// --- 4. DISCORD STRATEGY ---
+passport.use(new DiscordStrategy({
+    clientID: DISCORD_CLIENT_ID,
+    clientSecret: DISCORD_CLIENT_SECRET,
+    callbackURL: CALLBACK_URL,
+    scope: ['identify'] // Sirf user ki basic profile details chahiye
+}, async (accessToken, refreshToken, profile, done) => {
     try {
-        // Check karo agar user pehle se database mai hai
-        let user = await Player.findOne({ xId: profile.id });
+        let user = await Player.findOne({ discordId: profile.id });
 
         if (!user) {
-            // Agar naya user hai, toh create karo
             user = new Player({
-                xId: profile.id,
+                discordId: profile.id,
                 username: profile.username,
-                displayName: profile.displayName,
+                displayName: profile.global_name || profile.username,
                 score: 0,
                 totalOrbs: 0
             });
             await user.save();
-            console.log("🆕 New User Created via X (v1):", profile.username);
+            console.log("🆕 New User Created via Discord:", profile.username);
         } else {
             console.log("👋 Existing User Logged in:", profile.username);
         }
@@ -105,14 +100,13 @@ passport.use(new TwitterStrategy({
 
 // --- 5. AUTH ROUTES ---
 
-// Login Button Click
-app.get('/auth/twitter', passport.authenticate('twitter'));
+// Login Button Click (Discord)
+app.get('/auth/discord', passport.authenticate('discord'));
 
-// X Login ke baad wapis
-app.get('/auth/twitter/callback', 
-    passport.authenticate('twitter', { failureRedirect: '/' }),
+// Discord Login ke baad wapis
+app.get('/auth/discord/callback', 
+    passport.authenticate('discord', { failureRedirect: '/' }),
     (req, res) => {
-        // Popup window ko band karo aur main game ko batao ke login hogya
         res.send(`
             <script>
                 if (window.opener) {
@@ -147,8 +141,8 @@ io.on('connection', (socket) => {
         dbUserId: null
     };
 
-    // Link Socket to X User
-    socket.on('linkXSession', async (mongoID) => {
+    // Link Socket to Discord User (Renamed event)
+    socket.on('linkDiscordSession', async (mongoID) => {
         try {
             const user = await Player.findById(mongoID);
             if (user) {
@@ -159,7 +153,7 @@ io.on('connection', (socket) => {
                     username: user.username,
                     wallet: user.wallet
                 });
-                console.log(`🔗 Socket linked to User: @${user.username}`);
+                console.log(`🔗 Socket linked to Discord User: ${user.username}`);
             }
         } catch (err) { console.error(err); }
     });
@@ -247,5 +241,5 @@ io.on('connection', (socket) => {
 // --- SERVER START ---
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`✅ X-AUTH (V1) SERVER LIVE on Port ${PORT}`);
+    console.log(`✅ DISCORD AUTH SERVER LIVE on Port ${PORT}`);
 });

@@ -1,5 +1,4 @@
 // Global variables
-// Note: playerID might now be determined by the server after X auth, but we keep a local fallback
 window.playerID = localStorage.getItem('silentPath_id') || 'id_' + Math.random().toString(36).substr(2, 9);
 localStorage.setItem('silentPath_id', window.playerID);
 
@@ -10,7 +9,7 @@ window.personalBest = parseInt(localStorage.getItem('silentPath_pb')) || 0;
 // --- TOTAL ORBS TRACKING (Saved in LocalStorage) ---
 window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
 
-// --- X AUTH GLOBALS ---
+// --- DISCORD AUTH GLOBALS ---
 window.isLoggedIn = false;
 window.mongoId = null; // To link socket with DB
 
@@ -60,7 +59,6 @@ function manageBgVideo(action) {
 class MainMenu extends Phaser.Scene {
     constructor() { super("MainMenu"); }
     preload() {
-        // Video not needed in Phaser load anymore (loaded via HTML)
         this.load.audio("menuMusic", "assets/music.mp3");
         this.load.audio("buttonSound", "assets/button.mp3");
         
@@ -153,7 +151,7 @@ class MainMenu extends Phaser.Scene {
         createParchmentButton(400, 160, "START GAME", () => {
             // Check auth before starting
             if (!window.isLoggedIn) {
-                alert("Please Connect X Account first in Settings!");
+                alert("Please Connect Discord Account first in Settings!");
                 this.showSettings();
                 return;
             }
@@ -195,7 +193,6 @@ class MainMenu extends Phaser.Scene {
 
     // --- AUTH HELPER FUNCTIONS ---
     checkLoginStatus() {
-        // Fetch session from server on reload
         fetch('/auth/user').then(res => res.json()).then(user => {
             if(user) this.handleAuthSuccess(user);
         }).catch(err => console.log("Not logged in"));
@@ -203,8 +200,8 @@ class MainMenu extends Phaser.Scene {
 
     handleAuthSuccess(user) {
         window.isLoggedIn = true;
-        window.mongoId = user._id; // Important for Socket linking
-        window.playerName = "@" + user.username;
+        window.mongoId = user._id; 
+        window.playerName = user.username;
         window.totalOrbs = user.totalOrbs;
         window.personalBest = user.score;
         window.userWallet = user.wallet;
@@ -268,17 +265,17 @@ class MainMenu extends Phaser.Scene {
             this.soundStatus.setText(this.sound.mute ? "SOUND: OFF" : "SOUND: ON");
         });
 
-        // --- REPLACED RENAME CRUSADER WITH CONNECT X BUTTON ---
-        let xStatusText = window.isLoggedIn ? `CONNECTED: ${window.playerName}` : "CONNECT X ACCOUNT";
-        let xColor = window.isLoggedIn ? '#00aa00' : '#1DA1F2'; // Green if connected, Twitter Blue if not
+        // --- DISCORD CONNECTION BUTTON ---
+        let discordStatusText = window.isLoggedIn ? `CONNECTED: ${window.playerName}` : "CONNECT DISCORD";
+        let discordColor = window.isLoggedIn ? '#00aa00' : '#5865F2'; // Green if connected, Discord Blurple if not
         
-        let xBtn = this.add.text(0, -35, xStatusText, { fontSize: '20px', fill: '#ffffff', backgroundColor: xColor, padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
+        let discordBtn = this.add.text(0, -35, discordStatusText, { fontSize: '20px', fill: '#ffffff', backgroundColor: discordColor, padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
         
-        xBtn.on('pointerdown', () => {
+        discordBtn.on('pointerdown', () => {
             if (!window.isLoggedIn) {
                 this.sound.play("buttonSound");
-                // Open Popup for X Auth
-                window.open('/auth/twitter', 'x_auth_popup', 'width=600,height=600');
+                // Open Popup for Discord Auth
+                window.open('/auth/discord', 'discord_auth_popup', 'width=500,height=700');
             }
         });
 
@@ -289,7 +286,7 @@ class MainMenu extends Phaser.Scene {
               this.sound.play("buttonSound");
               this.tweens.add({ targets: this.setList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.settingsPopup.setVisible(false) });
           });
-        this.setList.add([setTitle, this.soundStatus, xBtn, this.walletText, setBack]);
+        this.setList.add([setTitle, this.soundStatus, discordBtn, this.walletText, setBack]);
         this.tweens.add({ targets: this.setList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
     }
 
@@ -537,9 +534,9 @@ class GameScene extends Phaser.Scene {
         if (this.socket) { this.socket.disconnect(); }
         this.socket = io(); 
         
-        // --- NEW: LINK SOCKET TO X USER IF LOGGED IN ---
+        // --- NEW: LINK SOCKET TO DISCORD USER ---
         if (window.isLoggedIn && window.mongoId) {
-            this.socket.emit('linkXSession', window.mongoId);
+            this.socket.emit('linkDiscordSession', window.mongoId);
         }
         
         this.socket.emit('requestRestart');
@@ -697,7 +694,7 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isGameOver = true;
         
-        // --- SAVE SCORE WITH WALLET INFO (Server handles ID via session) ---
+        // --- SAVE SCORE WITH WALLET INFO ---
         this.socket.emit('saveLeaderboardScore', { wallet: window.userWallet });
         this.socket.emit('playerDied'); 
         
@@ -720,7 +717,9 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        let shareBtn = createBtn(-35, "🐦 SHARE SCORE ON X", "#fff", "#1DA1F2", () => { this.shareToX(this.meters); });
+        // --- DISCORD COPY SCORE BUTTON ---
+        let shareBtn = createBtn(-35, "📋 COPY SCORE", "#fff", "#5865F2", () => { this.copyScoreToClipboard(this.meters); });
+        
         let restartBtn = createBtn(25, "RESTART CRUSADE", "#fff", "#444", () => { 
             this.sound.stopAll(); 
             this.socket.emit('requestRestart'); 
@@ -739,11 +738,17 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
-    shareToX(finalScore) {
-        const gameLink = "https://thesilentpath.io"; 
-        const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\n#TheSilentPath #Solana #Gaming`;
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-        window.open(twitterUrl, '_blank');
+    // --- NEW: COPY SCORE FUNCTION FOR DISCORD ---
+    copyScoreToClipboard(finalScore) {
+        const gameLink = "https://thesilentpath.onrender.com"; 
+        const textToCopy = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\nCan you beat my score? Play here: ${gameLink}`;
+        
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert("Score copied to clipboard! Paste it in your Discord server.");
+        }).catch(err => {
+            console.log("Copy failed", err);
+            alert("Failed to copy. Try again!");
+        });
     }
 
     async handleSolanaPayment() {
