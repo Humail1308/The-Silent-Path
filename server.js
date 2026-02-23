@@ -100,8 +100,8 @@ passport.use(new DiscordStrategy({
 
 // --- 5. AUTH ROUTES ---
 
-// Login Button Click (Discord)
-app.get('/auth/discord', passport.authenticate('discord'));
+// Login Button Click (Discord) - WITH 'prompt: consent' TO ALLOW ACCOUNT SWITCHING
+app.get('/auth/discord', passport.authenticate('discord', { prompt: 'consent' }));
 
 // Discord Login ke baad wapis
 app.get('/auth/discord/callback', 
@@ -119,6 +119,14 @@ app.get('/auth/discord/callback',
         `);
     }
 );
+
+// --- NEW: LOGOUT ROUTE ---
+app.get('/auth/logout', (req, res, next) => {
+    req.logout((err) => {
+        if (err) { return next(err); }
+        res.json({ success: true, message: "Disconnected successfully" });
+    });
+});
 
 // Game start honay par check karega
 app.get('/auth/user', (req, res) => {

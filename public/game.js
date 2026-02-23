@@ -213,6 +213,22 @@ class MainMenu extends Phaser.Scene {
         console.log("Logged in as:", window.playerName);
     }
 
+    // --- NEW: DISCONNECT DISCORD ---
+    disconnectDiscord() {
+        // Ping server to destroy session
+        fetch('/auth/logout').then(() => {
+            window.isLoggedIn = false;
+            window.mongoId = null;
+            window.playerName = "Anonymous Knight";
+            window.personalBest = 0;
+            // Optionally reset orbs to local, but setting to 0 ensures clean slate
+            window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
+            
+            console.log("Disconnected Discord Account.");
+            this.showSettings(); // Refresh UI
+        }).catch(err => console.log(err));
+    }
+
     createPopupContainers() {
         const createOverlay = () => this.add.rectangle(400, 225, 800, 450, 0x000000, 0.5).setInteractive();
 
@@ -258,7 +274,7 @@ class MainMenu extends Phaser.Scene {
 
         let setTitle = this.add.text(0, -150, "SETTINGS", { fontSize: '30px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
         
-        this.soundStatus = this.add.text(0, -85, this.sound.mute ? "SOUND: OFF" : "SOUND: ON", { fontSize: '22px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.soundStatus = this.add.text(0, -90, this.sound.mute ? "SOUND: OFF" : "SOUND: ON", { fontSize: '22px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.soundStatus.on('pointerdown', () => {
             this.sound.play("buttonSound");
             this.sound.mute = !this.sound.mute;
@@ -267,26 +283,43 @@ class MainMenu extends Phaser.Scene {
 
         // --- DISCORD CONNECTION BUTTON ---
         let discordStatusText = window.isLoggedIn ? `CONNECTED: ${window.playerName}` : "CONNECT DISCORD";
-        let discordColor = window.isLoggedIn ? '#00aa00' : '#5865F2'; // Green if connected, Discord Blurple if not
+        let discordColor = window.isLoggedIn ? '#00aa00' : '#5865F2'; 
         
+        // Adjusted Y position to make room for disconnect
         let discordBtn = this.add.text(0, -35, discordStatusText, { fontSize: '20px', fill: '#ffffff', backgroundColor: discordColor, padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
         
         discordBtn.on('pointerdown', () => {
             if (!window.isLoggedIn) {
                 this.sound.play("buttonSound");
-                // Open Popup for Discord Auth
                 window.open('/auth/discord', 'discord_auth_popup', 'width=500,height=700');
             }
         });
+        
+        this.setList.add([setTitle, this.soundStatus, discordBtn]);
 
-        this.walletText = this.add.text(0, 35, "", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#9945FF', padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
+        // --- NEW: DISCONNECT BUTTON (Only shows if logged in) ---
+        if (window.isLoggedIn) {
+            let disconnectBtn = this.add.text(0, 5, "DISCONNECT ACCOUNT", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
+            
+            disconnectBtn.on('pointerover', () => disconnectBtn.setScale(1.05));
+            disconnectBtn.on('pointerout', () => disconnectBtn.setScale(1));
+            disconnectBtn.on('pointerdown', () => {
+                this.sound.play("buttonSound");
+                this.disconnectDiscord();
+            });
+            this.setList.add(disconnectBtn);
+        }
+
+        // Adjusted Y position for wallet
+        this.walletText = this.add.text(0, 50, "", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#9945FF', padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
         this.updateWalletButtonText();
 
         let setBack = this.add.text(0, 150, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
               this.sound.play("buttonSound");
               this.tweens.add({ targets: this.setList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.settingsPopup.setVisible(false) });
           });
-        this.setList.add([setTitle, this.soundStatus, discordBtn, this.walletText, setBack]);
+          
+        this.setList.add([this.walletText, setBack]);
         this.tweens.add({ targets: this.setList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
     }
 
