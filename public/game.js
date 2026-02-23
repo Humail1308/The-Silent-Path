@@ -542,6 +542,7 @@ class GameScene extends Phaser.Scene {
         this.isGameOver = false; 
         this.isPaused = false;
         this.currentLevel = data.level || 1;
+        this.jumpCount = 0; // NEW: Track jumps for double jump
     }
     preload() {
         this.load.spritesheet("playerRun", "assets/player_run.png", { frameWidth: 336, frameHeight: 543 });
@@ -654,11 +655,24 @@ class GameScene extends Phaser.Scene {
         });
     }
 
+    // --- NEW: UPDATED JUMP FUNCTION FOR DOUBLE JUMP & FLIP ---
     jump() {
-        if (this.player.body.touching.down) {
+        if (this.jumpCount < 2) {
             this.player.setVelocityY(-850); 
             this.sound.play("jumpSound", {volume: 0.3});
             this.socket.emit('jumpAction');
+            
+            this.jumpCount++;
+
+            // Trigger Backflip on double jump
+            if (this.jumpCount === 2) {
+                this.tweens.add({
+                    targets: this.player,
+                    angle: -360, // Rotate backwards
+                    duration: 650, // Matches hang time
+                    ease: 'Sine.easeInOut'
+                });
+            }
         }
     }
 
@@ -704,13 +718,30 @@ class GameScene extends Phaser.Scene {
         }
     }
 
+    // --- NEW: UPDATED UPDATE FUNCTION TO RESET JUMP ---
     update() {
         if (this.isGameOver || this.isPaused) return;
         let currentScroll = 4 + (this.meters / 1000);
-        this.bg.tilePositionX += currentScroll; this.ground.tilePositionX += currentScroll;
+        this.bg.tilePositionX += currentScroll; 
+        this.ground.tilePositionX += currentScroll;
+        
         let onGround = this.player.body.touching.down;
+        
+        // Reset jump count and rotation when touching ground
+        if (onGround) {
+            this.jumpCount = 0;
+            this.player.setAngle(0);
+        }
+
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) { this.jump(); }
-        if (!onGround) { this.player.anims.stop(); this.player.setFrame(1); } else if (!this.player.anims.isPlaying) { this.player.play('run'); }
+        
+        if (!onGround) { 
+            this.player.anims.stop(); 
+            this.player.setFrame(1); 
+        } else if (!this.player.anims.isPlaying) { 
+            this.player.play('run'); 
+        }
+        
         this.obstacles.getChildren().forEach(obs => { if(obs.x < -100) obs.destroy(); });
         this.orbs.getChildren().forEach(orb => { if(orb.x < -100) orb.destroy(); });
     }

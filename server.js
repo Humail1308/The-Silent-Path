@@ -186,11 +186,13 @@ io.on('connection', (socket) => {
     socket.on('pauseGame', () => { if (activeSessions[socket.id]) activeSessions[socket.id].isPaused = true; });
     socket.on('resumeGame', () => { if (activeSessions[socket.id]) { activeSessions[socket.id].isPaused = false; activeSessions[socket.id].lastSpawn = Date.now(); }});
     
+    // --- UPDATED JUMP ACTION (Reduced Cooldown for Double Jump) ---
     socket.on('jumpAction', () => {
         let session = activeSessions[socket.id];
         if (!session || !session.isAlive || session.isPaused) return;
         let now = Date.now();
-        if (now - session.lastJumpTime < 400) return;
+        // Changed from 400 to 200 to allow quick double taps
+        if (now - session.lastJumpTime < 200) return; 
         session.lastJumpTime = now;
         session.isJumping = true;
         setTimeout(() => { if (activeSessions[socket.id]) activeSessions[socket.id].isJumping = false; }, 800);
