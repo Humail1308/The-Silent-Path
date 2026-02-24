@@ -542,7 +542,7 @@ class GameScene extends Phaser.Scene {
         this.isGameOver = false; 
         this.isPaused = false;
         this.currentLevel = data.level || 1;
-        this.jumpCount = 0; // NEW: Track jumps for normal double jump
+        this.jumpCount = 0; // Track jumps for normal double jump
     }
     preload() {
         this.load.spritesheet("playerRun", "assets/player_run.png", { frameWidth: 336, frameHeight: 543 });
@@ -591,6 +591,7 @@ class GameScene extends Phaser.Scene {
 
         this.socket.on('spawnObstacle', (data) => {
             if (this.isGameOver || this.isPaused) return;
+            // Obstacle speed control handles speed from server side.
             let obstacleSpeed = data.speed || 400;
             if (data.type === 'barrel') {
                 let barrel = this.obstacles.create(850, 425, "barrel");
@@ -655,15 +656,21 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    // --- NEW: NORMAL DOUBLE JUMP FUNCTION ---
+    // --- NEW: UPDATED JUMP FUNCTION (DIFFERENT HEIGHTS) ---
     jump() {
-        // Sirf tab jump kare jab jump count 2 se kam ho
         if (this.jumpCount < 2) {
-            this.player.setVelocityY(-850); // Player ko hawa mein bhejo
+            if (this.jumpCount === 0) {
+                // First Jump: Normal Height
+                this.player.setVelocityY(-850); 
+            } else {
+                // Second Jump (Double Jump): Slightly smaller height
+                this.player.setVelocityY(-600); 
+            }
+            
             this.sound.play("jumpSound", {volume: 0.3});
             this.socket.emit('jumpAction');
             
-            this.jumpCount++; // Jump count barha do
+            this.jumpCount++;
         }
     }
 
@@ -709,16 +716,18 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    // --- NEW: UPDATED UPDATE FUNCTION TO RESET JUMP ---
+    // --- NEW: UPDATED UPDATE FUNCTION TO INCREASE GAME SPEED ---
     update() {
         if (this.isGameOver || this.isPaused) return;
-        let currentScroll = 4 + (this.meters / 1000);
+        
+        // --- Speed up background scrolling as meters increase ---
+        // Base speed increased from 4 to 6, and multiplier increased from /1000 to /600
+        let currentScroll = 6 + (this.meters / 600); 
         this.bg.tilePositionX += currentScroll; 
         this.ground.tilePositionX += currentScroll;
         
         let onGround = this.player.body.touching.down;
         
-        // Zameen par lagte hi jump count 0 kardo taake wapis jump kar sakay
         if (onGround) {
             this.jumpCount = 0;
         }
@@ -748,7 +757,6 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isGameOver = true;
         
-        // --- SAVE SCORE WITH WALLET INFO ---
         this.socket.emit('saveLeaderboardScore', { wallet: window.userWallet });
         this.socket.emit('playerDied'); 
         
@@ -771,7 +779,6 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        // --- DISCORD COPY SCORE BUTTON ---
         let shareBtn = createBtn(-35, "📋 COPY SCORE", "#fff", "#5865F2", () => { this.copyScoreToClipboard(this.meters); });
         
         let restartBtn = createBtn(25, "RESTART CRUSADE", "#fff", "#444", () => { 
@@ -792,7 +799,6 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
-    // --- NEW: COPY SCORE FUNCTION FOR DISCORD ---
     copyScoreToClipboard(finalScore) {
         const gameLink = "https://thesilentpath.onrender.com"; 
         const textToCopy = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\nCan you beat my score? Play here: ${gameLink}`;

@@ -172,10 +172,15 @@ io.on('connection', (socket) => {
         if (!session || !session.isAlive || session.isPaused) return;
 
         session.distance += 1;
-        const speed = Math.min(400 + Math.floor(session.distance / 100) * 15, 850);
+        
+        // --- UPDATED OBSTACLE SPEED FORMULA ---
+        // Base speed 600, scales up faster, max cap at 1200
+        const speed = Math.min(600 + Math.floor(session.distance / 50) * 20, 1200);
         const now = Date.now();
 
-        if (Math.random() > 0.9 && now - session.lastSpawn > 1200) {
+        // --- UPDATED SPAWN RATE ---
+        // Spawn delay reduced from 1200ms to 800ms to match the higher speed
+        if (Math.random() > 0.9 && now - session.lastSpawn > 800) {
             socket.emit('spawnObstacle', { type: Math.random() > 0.4 ? 'barrel' : 'orb', speed });
             session.lastSpawn = now;
         }
@@ -191,8 +196,8 @@ io.on('connection', (socket) => {
         let session = activeSessions[socket.id];
         if (!session || !session.isAlive || session.isPaused) return;
         let now = Date.now();
-        // Changed from 400 to 200 to allow quick double taps
-        if (now - session.lastJumpTime < 200) return; 
+        // Changed to 100ms to ensure very fast double taps never get missed
+        if (now - session.lastJumpTime < 100) return; 
         session.lastJumpTime = now;
         session.isJumping = true;
         setTimeout(() => { if (activeSessions[socket.id]) activeSessions[socket.id].isJumping = false; }, 800);
