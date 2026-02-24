@@ -173,14 +173,16 @@ io.on('connection', (socket) => {
 
         session.distance += 1;
         
-        // --- UPDATED OBSTACLE SPEED FORMULA ---
-        // Base speed 600, scales up faster, max cap at 1200
-        const speed = Math.min(600 + Math.floor(session.distance / 50) * 20, 1200);
+        // --- UPDATED PERFECT SPEED FORMULA ---
+        // Base speed 450 (slow start), barhaygi har 100 meters par, Max limit 1000.
+        const speed = Math.min(450 + Math.floor(session.distance / 100) * 30, 1000);
         const now = Date.now();
 
-        // --- UPDATED SPAWN RATE ---
-        // Spawn delay reduced from 1200ms to 800ms to match the higher speed
-        if (Math.random() > 0.9 && now - session.lastSpawn > 800) {
+        // --- DYNAMIC SPAWN RATE ---
+        // Start mein obstacles aaram se ayenge (1200ms), jese speed barhegi obstacles ka gap kam hoga (Max 650ms)
+        const minSpawnDelay = Math.max(1200 - Math.floor(session.distance / 100) * 50, 650);
+
+        if (Math.random() > 0.9 && now - session.lastSpawn > minSpawnDelay) {
             socket.emit('spawnObstacle', { type: Math.random() > 0.4 ? 'barrel' : 'orb', speed });
             session.lastSpawn = now;
         }
