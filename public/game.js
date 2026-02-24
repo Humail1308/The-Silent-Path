@@ -716,13 +716,12 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    // --- NEW: UPDATED UPDATE FUNCTION TO INCREASE GAME SPEED ---
+    // --- NEW: SYNCED BACKGROUND SCROLL SPEED ---
     update() {
         if (this.isGameOver || this.isPaused) return;
         
-        // --- Speed up background scrolling as meters increase ---
-        // Base speed increased from 4 to 6, and multiplier increased from /1000 to /600
-        let currentScroll = 6 + (this.meters / 600); 
+        // Background ki speed ahista se start hogi aur server ki obstacles ke sath match karegi
+        let currentScroll = 4.5 + (this.meters / 800); 
         this.bg.tilePositionX += currentScroll; 
         this.ground.tilePositionX += currentScroll;
         
