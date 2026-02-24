@@ -778,7 +778,8 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        let shareBtn = createBtn(-35, "📋 COPY SCORE", "#fff", "#5865F2", () => { this.copyScoreToClipboard(this.meters); });
+        // --- UPDATED: SHARE ON X BUTTON ---
+        let shareBtn = createBtn(-35, "🐦 SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
         
         let restartBtn = createBtn(25, "RESTART CRUSADE", "#fff", "#444", () => { 
             this.sound.stopAll(); 
@@ -798,16 +799,13 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
-    copyScoreToClipboard(finalScore) {
-        const gameLink = "https://thesilentpath.onrender.com"; 
-        const textToCopy = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\nCan you beat my score? Play here: ${gameLink}`;
+    // --- NEW: X INTENT SHARE FUNCTION ---
+    shareToX(finalScore) {
+        const gameLink = "https://the-silent-path.onrender.com"; 
+        const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? Play now:`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
         
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            alert("Score copied to clipboard! Paste it in your Discord server.");
-        }).catch(err => {
-            console.log("Copy failed", err);
-            alert("Failed to copy. Try again!");
-        });
+        window.open(twitterUrl, '_blank');
     }
 
     async handleSolanaPayment() {
