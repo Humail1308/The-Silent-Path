@@ -149,7 +149,7 @@ io.on('connection', (socket) => {
         dbUserId: null
     };
 
-    // Link Socket to Discord User (Renamed event)
+    // Link Socket to Discord User
     socket.on('linkDiscordSession', async (mongoID) => {
         try {
             const user = await Player.findById(mongoID);

@@ -542,7 +542,7 @@ class GameScene extends Phaser.Scene {
         this.isGameOver = false; 
         this.isPaused = false;
         this.currentLevel = data.level || 1;
-        this.jumpCount = 0; // NEW: Track jumps for double jump
+        this.jumpCount = 0; // NEW: Track jumps for normal double jump
     }
     preload() {
         this.load.spritesheet("playerRun", "assets/player_run.png", { frameWidth: 336, frameHeight: 543 });
@@ -655,24 +655,15 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    // --- NEW: UPDATED JUMP FUNCTION FOR DOUBLE JUMP & FLIP ---
+    // --- NEW: NORMAL DOUBLE JUMP FUNCTION ---
     jump() {
+        // Sirf tab jump kare jab jump count 2 se kam ho
         if (this.jumpCount < 2) {
-            this.player.setVelocityY(-850); 
+            this.player.setVelocityY(-850); // Player ko hawa mein bhejo
             this.sound.play("jumpSound", {volume: 0.3});
             this.socket.emit('jumpAction');
             
-            this.jumpCount++;
-
-            // Trigger Backflip on double jump
-            if (this.jumpCount === 2) {
-                this.tweens.add({
-                    targets: this.player,
-                    angle: -360, // Rotate backwards
-                    duration: 650, // Matches hang time
-                    ease: 'Sine.easeInOut'
-                });
-            }
+            this.jumpCount++; // Jump count barha do
         }
     }
 
@@ -727,10 +718,9 @@ class GameScene extends Phaser.Scene {
         
         let onGround = this.player.body.touching.down;
         
-        // Reset jump count and rotation when touching ground
+        // Zameen par lagte hi jump count 0 kardo taake wapis jump kar sakay
         if (onGround) {
             this.jumpCount = 0;
-            this.player.setAngle(0);
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) { this.jump(); }
