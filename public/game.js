@@ -91,7 +91,6 @@ class MainMenu extends Phaser.Scene {
             .setDisplaySize(650, 100)
             .setAlpha(1);
 
-        // MAIN TITLE
         this.add.text(400, 55, "THE SILENT PATH", {
             fontSize: "55px", 
             fill: "#4a2c0a",
@@ -100,12 +99,13 @@ class MainMenu extends Phaser.Scene {
             resolution: 2 
         }).setOrigin(0.5);
 
-        // --- NEW: BETA VERSION TEXT ---
         this.add.text(400, 95, "[ BETA VERSION ]", {
             fontSize: "18px", 
-            fill: "#4a2c0a", // Red color
+            fill: "#ff4444", 
             fontFamily: "'MedievalSharp'", 
             fontWeight: 'bold',
+            stroke: '#000',
+            strokeThickness: 2,
             resolution: 2 
         }).setOrigin(0.5);
 
@@ -162,14 +162,13 @@ class MainMenu extends Phaser.Scene {
 
         // --- MENU BUTTONS ---
         createParchmentButton(400, 160, "START GAME", () => {
-            // Check auth before starting
             if (!window.isLoggedIn) {
                 alert("Please Connect Discord Account first in Settings!");
                 this.showSettings();
                 return;
             }
-            this.sound.stopAll(); // Stop Menu Music
-            manageBgVideo('stop'); // Stop HTML Video
+            this.sound.stopAll(); 
+            manageBgVideo('stop'); 
             this.scene.start("GameScene", { meters: 0, orbs: 0 });
         });
 
@@ -185,7 +184,6 @@ class MainMenu extends Phaser.Scene {
             this.showMaps();
         });
 
-        // Leaderboard Icon
         let lbContainer = this.add.container(750, 400);
         let lbBg = this.add.image(0, 0, "parchment").setDisplaySize(70, 70).setInteractive({ useHandCursor: true });
         let lbIcon = this.add.text(0, 0, "🏆", { fontSize: '40px', resolution: 2 }).setOrigin(0.5);
@@ -200,11 +198,9 @@ class MainMenu extends Phaser.Scene {
             this.showLeaderboard(); 
         });
 
-        // --- POPUP CONTAINERS INIT ---
         this.createPopupContainers();
     }
 
-    // --- AUTH HELPER FUNCTIONS ---
     checkLoginStatus() {
         fetch('/auth/user').then(res => res.json()).then(user => {
             if(user) this.handleAuthSuccess(user);
@@ -217,28 +213,29 @@ class MainMenu extends Phaser.Scene {
         window.playerName = user.username;
         window.totalOrbs = user.totalOrbs;
         window.personalBest = user.score;
-        window.userWallet = user.wallet;
         
-        // Refresh Settings UI if open
+        // --- FIX 1: Sirf tabhi overwrite karein jab DB mein actually wallet mojood ho ---
+        if (user.wallet && user.wallet.trim() !== "") {
+            window.userWallet = user.wallet;
+            localStorage.setItem('silentPath_wallet', window.userWallet);
+        }
+        
         if (this.settingsPopup && this.settingsPopup.visible) {
             this.showSettings(); 
         }
         console.log("Logged in as:", window.playerName);
     }
 
-    // --- NEW: DISCONNECT DISCORD ---
     disconnectDiscord() {
-        // Ping server to destroy session
         fetch('/auth/logout').then(() => {
             window.isLoggedIn = false;
             window.mongoId = null;
             window.playerName = "Anonymous Knight";
             window.personalBest = 0;
-            // Optionally reset orbs to local, but setting to 0 ensures clean slate
             window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
             
             console.log("Disconnected Discord Account.");
-            this.showSettings(); // Refresh UI
+            this.showSettings(); 
         }).catch(err => console.log(err));
     }
 
@@ -294,11 +291,9 @@ class MainMenu extends Phaser.Scene {
             this.soundStatus.setText(this.sound.mute ? "SOUND: OFF" : "SOUND: ON");
         });
 
-        // --- DISCORD CONNECTION BUTTON ---
         let discordStatusText = window.isLoggedIn ? `CONNECTED: ${window.playerName}` : "CONNECT DISCORD";
         let discordColor = window.isLoggedIn ? '#00aa00' : '#5865F2'; 
         
-        // Adjusted Y position to make room for disconnect
         let discordBtn = this.add.text(0, -35, discordStatusText, { fontSize: '20px', fill: '#ffffff', backgroundColor: discordColor, padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
         
         discordBtn.on('pointerdown', () => {
@@ -310,7 +305,6 @@ class MainMenu extends Phaser.Scene {
         
         this.setList.add([setTitle, this.soundStatus, discordBtn]);
 
-        // --- NEW: DISCONNECT BUTTON (Only shows if logged in) ---
         if (window.isLoggedIn) {
             let disconnectBtn = this.add.text(0, 5, "DISCONNECT ACCOUNT", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
             
@@ -323,7 +317,6 @@ class MainMenu extends Phaser.Scene {
             this.setList.add(disconnectBtn);
         }
 
-        // Adjusted Y position for wallet
         this.walletText = this.add.text(0, 50, "", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#9945FF', padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
         this.updateWalletButtonText();
 
@@ -336,7 +329,6 @@ class MainMenu extends Phaser.Scene {
         this.tweens.add({ targets: this.setList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
     }
 
-    // --- SHOP LOGIC ---
     showShop() {
         this.shopPopup.setVisible(true);
         this.shopList.removeAll(true);
@@ -394,7 +386,6 @@ class MainMenu extends Phaser.Scene {
         this.tweens.add({ targets: this.shopList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
     }
 
-    // --- MAPS LOGIC ---
     showMaps() {
         this.mapsPopup.setVisible(true);
         this.mapsList.removeAll(true);
@@ -443,8 +434,8 @@ class MainMenu extends Phaser.Scene {
                 
                 levelImg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
                     this.sound.play("buttonSound");
-                    this.sound.stopAll(); // STOP MENU MUSIC
-                    manageBgVideo('stop'); // STOP HTML VIDEO
+                    this.sound.stopAll(); 
+                    manageBgVideo('stop'); 
                     this.scene.start("GameScene", { level: lvl.id });
                 });
             }
@@ -479,7 +470,6 @@ class MainMenu extends Phaser.Scene {
         this.tweens.add({ targets: this.mapsList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
     }
 
-    // --- LEADERBOARD LOGIC ---
     showLeaderboard() {
         this.input.setTopOnly(true);
         this.lbPopup.setVisible(true);
@@ -540,7 +530,19 @@ class MainMenu extends Phaser.Scene {
                 window.userWallet = resp.publicKey.toString();
                 localStorage.setItem('silentPath_wallet', window.userWallet);
                 this.updateWalletButtonText();
-                alert("Wallet connected!");
+
+                // --- FIX 2: INSTANT WALLET SYNC ---
+                // Phantom connect hotay hi server ko foran update bhej dega
+                if (window.isLoggedIn && window.mongoId && typeof io !== 'undefined') {
+                    const syncSocket = io();
+                    syncSocket.emit('linkDiscordSession', window.mongoId);
+                    syncSocket.once('syncData', () => {
+                        syncSocket.emit('saveLeaderboardScore', { wallet: window.userWallet });
+                        setTimeout(() => syncSocket.disconnect(), 1000);
+                    });
+                }
+
+                alert("Wallet connected successfully!");
             } catch (err) { console.log("Cancelled"); }
         } else { alert("Phantom Wallet not found!"); }
     }
@@ -555,7 +557,6 @@ class GameScene extends Phaser.Scene {
         this.orbScore = 0; 
         this.isGameOver = false; 
         
-        // --- CHANGED: Sirf first time game pause hogi instructions ke liye ---
         this.isPaused = !window.hasSeenInstructions; 
         
         this.currentLevel = data.level || 1;
@@ -593,7 +594,6 @@ class GameScene extends Phaser.Scene {
         
         this.socket.emit('requestRestart');
         
-        // --- NEW: Agar instructions dikhani hain, toh server ko bhi fauran rok do ---
         if (this.isPaused) {
             this.socket.emit('pauseGame');
         }
@@ -641,7 +641,6 @@ class GameScene extends Phaser.Scene {
         }
         this.player.play('run');
         
-        // --- NEW: Agar paused hai toh animation aur physics rok do ---
         if (this.isPaused) {
             this.player.anims.pause();
             this.physics.pause();
@@ -667,7 +666,6 @@ class GameScene extends Phaser.Scene {
 
         this.createPauseMenu();
         
-        // --- NEW: Decide karega ke Instructions dikhani hain ya seedha Level start karna hai ---
         if (!window.hasSeenInstructions) {
             this.showInstructionsPopup();
         } else {
@@ -675,7 +673,6 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    // --- NEW: INSTRUCTIONS MENU LOGIC ---
     showInstructionsPopup() {
         this.instructionOverlay = this.add.rectangle(400, 225, 800, 450, 0x000000, 0.7).setDepth(299).setInteractive(); 
         this.instructionMenu = this.add.container(400, 225).setDepth(300).setScale(0.5).setAlpha(0);
@@ -683,7 +680,6 @@ class GameScene extends Phaser.Scene {
         let scrollBg = this.add.image(0, 0, "parchment").setDisplaySize(550, 420);
         let title = this.add.text(0, -150, "HOW TO PLAY", { fontSize: '32px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
         
-        // Instructions Text
         let bestExp = this.add.text(0, -100, "For best experience, play on PC/Laptop.", { fontSize: '16px', fill: '#ff4444', fontFamily: "Arial", fontWeight: 'bold', fontStyle: 'italic', resolution: 2 }).setOrigin(0.5);
         
         const txtStyle = { fontSize: '18px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', align: 'center', resolution: 2 };
@@ -693,13 +689,11 @@ class GameScene extends Phaser.Scene {
         
         let orbTip = this.add.text(0, 100, "🔮 Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
 
-        // Start Crusade Button
         let startBtn = this.add.text(0, 160, "START CRUSADE", { fontSize: '24px', fill: '#fff', backgroundColor: '#4a2c0a', padding: 8, fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         
         startBtn.on('pointerover', () => { startBtn.setScale(1.1); startBtn.setStyle({fill: '#DAA520'}); });
         startBtn.on('pointerout', () => { startBtn.setScale(1.0); startBtn.setStyle({fill: '#fff'}); });
         
-        // --- BUTTON CLICK LOGIC (Game resumes exactly from 0m) ---
         startBtn.on('pointerdown', () => { 
             this.sound.play("btnClick"); 
             this.tweens.add({ 
@@ -710,11 +704,11 @@ class GameScene extends Phaser.Scene {
                     this.instructionOverlay.destroy();
                     this.instructionMenu.destroy();
                     
-                    window.hasSeenInstructions = true; // Aainda nahi dikhega
+                    window.hasSeenInstructions = true; 
                     this.isPaused = false;
                     this.physics.resume();
                     this.player.anims.resume();
-                    this.socket.emit('resumeGame'); // Server ko start karne ka signal
+                    this.socket.emit('resumeGame'); 
                     this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
                 } 
             });
