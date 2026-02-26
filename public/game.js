@@ -91,12 +91,24 @@ class MainMenu extends Phaser.Scene {
             .setDisplaySize(650, 100)
             .setAlpha(1);
 
-        this.add.text(400, 70, "THE SILENT PATH", {
-            fontSize: "60px", 
+        // MAIN TITLE
+        this.add.text(400, 55, "THE SILENT PATH", {
+            fontSize: "55px", 
             fill: "#4a2c0a",
             fontFamily: "'MedievalSharp'", 
             fontWeight: 'bold',
-            resolution: 2 // Sharp Text
+            resolution: 2 
+        }).setOrigin(0.5);
+
+        // --- NEW: BETA VERSION TEXT ---
+        this.add.text(400, 95, "[ BETA VERSION ]", {
+            fontSize: "18px", 
+            fill: "#ff4444", // Red color
+            fontFamily: "'MedievalSharp'", 
+            fontWeight: 'bold',
+            stroke: '#000',
+            strokeThickness: 2,
+            resolution: 2 
         }).setOrigin(0.5);
 
         // --- AUTH: CHECK LOGIN STATUS ---
@@ -843,7 +855,6 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        // --- UPDATED: REVIVE BUTTON REMOVED. ALIGNMENT ADJUSTED ---
         let shareBtn = createBtn(-25, "🐦 SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
         
         let restartBtn = createBtn(45, "RESTART CRUSADE", "#fff", "#444", () => { 
@@ -852,8 +863,6 @@ class GameScene extends Phaser.Scene {
             this.scene.restart(); 
         });
 
-        // Revive button hata diya gaya hai yahan se
-        
         let menuBtn = this.add.text(0, 130, "RETURN TO MAIN MENU", { fontSize: '18px', fill: '#5e3e1a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { 
             this.sound.play("btnClick"); 
             this.socket.emit('playerDied'); 
