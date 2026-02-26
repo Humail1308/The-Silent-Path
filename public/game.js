@@ -103,7 +103,7 @@ class MainMenu extends Phaser.Scene {
         // --- NEW: BETA VERSION TEXT ---
         this.add.text(400, 95, "[ BETA VERSION ]", {
             fontSize: "18px", 
-            fill: "#ff4444", // Red color
+            fill: "#4a2c0a", // Red color
             fontFamily: "'MedievalSharp'", 
             fontWeight: 'bold',
             stroke: '#000',
