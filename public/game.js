@@ -678,10 +678,10 @@ class GameScene extends Phaser.Scene {
         
         const txtStyle = { fontSize: '18px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', align: 'center', resolution: 2 };
         
-        let pcControls = this.add.text(0, -40, "PC CONTROLS:\n[UP Arrow] = Jump\n[UP Arrow] (x2) = Double Jump", txtStyle).setOrigin(0.5);
-        let mobControls = this.add.text(0, 30, "MOBILE CONTROLS:\n[Tap Screen] = Jump\n[Tap Screen] (x2) = Double Jump", txtStyle).setOrigin(0.5);
+        let pcControls = this.add.text(0, -40, "💻 PC CONTROLS:\n[UP Arrow] = Jump\n[UP Arrow] (x2) = Double Jump", txtStyle).setOrigin(0.5);
+        let mobControls = this.add.text(0, 30, "📱 MOBILE CONTROLS:\n[Tap Screen] = Jump\n[Tap Screen] (x2) = Double Jump", txtStyle).setOrigin(0.5);
         
-        let orbTip = this.add.text(0, 100, "Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
+        let orbTip = this.add.text(0, 100, "🔮 Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
 
         // Start Crusade Button
         let startBtn = this.add.text(0, 160, "START CRUSADE", { fontSize: '24px', fill: '#fff', backgroundColor: '#4a2c0a', padding: 8, fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -843,15 +843,18 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        let shareBtn = createBtn(-35, "SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
+        // --- UPDATED: REVIVE BUTTON REMOVED. ALIGNMENT ADJUSTED ---
+        let shareBtn = createBtn(-25, "🐦 SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
         
-        let restartBtn = createBtn(25, "RESTART CRUSADE", "#fff", "#444", () => { 
+        let restartBtn = createBtn(45, "RESTART CRUSADE", "#fff", "#444", () => { 
             this.sound.stopAll(); 
             this.socket.emit('requestRestart'); 
             this.scene.restart(); 
         });
-        let reviveBtn = createBtn(85, "REVIVE ($5 SR2C)", "#0f0", "#111", () => { this.handleSolanaPayment(); });
-        let menuBtn = this.add.text(0, 150, "RETURN TO MAIN MENU", { fontSize: '18px', fill: '#5e3e1a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { 
+
+        // Revive button hata diya gaya hai yahan se
+        
+        let menuBtn = this.add.text(0, 130, "RETURN TO MAIN MENU", { fontSize: '18px', fill: '#5e3e1a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { 
             this.sound.play("btnClick"); 
             this.socket.emit('playerDied'); 
             this.sound.stopAll(); 
@@ -859,29 +862,15 @@ class GameScene extends Phaser.Scene {
         });
         menuBtn.on('pointerover', () => menuBtn.setScale(1.1).setStyle({fill: '#DAA520'})); menuBtn.on('pointerout', () => menuBtn.setScale(1).setStyle({fill: '#5e3e1a'}));
 
-        goContainer.add([scrollBg, title, scoreResult, shareBtn, restartBtn, reviveBtn, menuBtn]);
+        goContainer.add([scrollBg, title, scoreResult, shareBtn, restartBtn, menuBtn]);
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
     shareToX(finalScore) {
-        const gameLink = "https://the-silent-path.onrender.com/"; 
+        const gameLink = "https://the-silent-path.onrender.com/?ref=x"; 
         const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? Play now:`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
         window.open(twitterUrl, '_blank');
-    }
-
-    async handleSolanaPayment() {
-        if (!window.solana || !window.userWallet) { alert("Connect Phantom Wallet!"); return; }
-        try {
-            const provider = window.solana;
-            const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
-            const transaction = new solanaWeb3.Transaction().add(solanaWeb3.SystemProgram.transfer({ fromPubkey: new solanaWeb3.PublicKey(window.userWallet), toPubkey: new solanaWeb3.PublicKey("YOUR_WALLET_ADDRESS"), lamports: 0.01 * solanaWeb3.LAMPORTS_PER_SOL }));
-            transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-            transaction.feePayer = new solanaWeb3.PublicKey(window.userWallet);
-            const { signature } = await provider.signAndSendTransaction(transaction);
-            await connection.confirmTransaction(signature);
-            this.socket.emit('requestRestart'); this.scene.restart();
-        } catch (err) { alert("Failed: " + err.message); }
     }
 }
 
