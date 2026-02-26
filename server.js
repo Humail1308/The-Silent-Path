@@ -17,9 +17,20 @@ const DISCORD_CLIENT_ID = "1475608001229619411";
 const DISCORD_CLIENT_SECRET = "XcMn-oRVXMXDpk5GwG8g7vqIicqRc-lS"; 
 const CALLBACK_URL = "https://the-silent-path.onrender.com/auth/discord/callback";
 
-// --- 2. DATABASE CONNECTION (Anti-Crash) ---
+// --- 2. DATABASE CONNECTION (Anti-Crash & Index Fix) ---
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Connected (Permanent Storage)"))
+    .then(async () => {
+        console.log("✅ MongoDB Connected (Permanent Storage)");
+        
+        // 🛠️ FIX FOR "Internal Server Error" (Duplicate Key Error)
+        // Yeh line purane "xId" ke unique rule ko database se delete kar degi
+        try {
+            await mongoose.connection.collection('players').dropIndex('xId_1');
+            console.log("🧹 Cleaned up old xId rule! Friends can now login without errors.");
+        } catch (err) { 
+            // Agar index pehle hi drop ho chuka hai ya nahi mila, toh skip karega
+        }
+    })
     .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
 mongoose.connection.on('error', err => {
