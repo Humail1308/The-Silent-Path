@@ -167,8 +167,8 @@ class MainMenu extends Phaser.Scene {
                 this.showSettings();
                 return;
             }
-            this.sound.stopAll(); 
-            manageBgVideo('stop'); 
+            this.sound.stopAll(); // Stop Menu Music
+            manageBgVideo('stop'); // Stop HTML Video
             this.scene.start("GameScene", { meters: 0, orbs: 0 });
         });
 
@@ -214,7 +214,6 @@ class MainMenu extends Phaser.Scene {
         window.totalOrbs = user.totalOrbs;
         window.personalBest = user.score;
         
-        // --- FIX 1: Sirf tabhi overwrite karein jab DB mein actually wallet mojood ho ---
         if (user.wallet && user.wallet.trim() !== "") {
             window.userWallet = user.wallet;
             localStorage.setItem('silentPath_wallet', window.userWallet);
@@ -235,7 +234,7 @@ class MainMenu extends Phaser.Scene {
             window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
             
             console.log("Disconnected Discord Account.");
-            this.showSettings(); 
+            this.showSettings(); // Refresh UI
         }).catch(err => console.log(err));
     }
 
@@ -319,14 +318,41 @@ class MainMenu extends Phaser.Scene {
 
         this.walletText = this.add.text(0, 50, "", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#9945FF', padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
         this.updateWalletButtonText();
+        this.setList.add(this.walletText);
 
-        let setBack = this.add.text(0, 150, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        // --- NEW: WALLET DISCONNECT BUTTON ---
+        if (window.userWallet) {
+            let discWalletBtn = this.add.text(0, 95, "DISCONNECT WALLET", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
+            
+            discWalletBtn.on('pointerover', () => discWalletBtn.setScale(1.05));
+            discWalletBtn.on('pointerout', () => discWalletBtn.setScale(1));
+            discWalletBtn.on('pointerdown', () => {
+                this.sound.play("buttonSound");
+                this.disconnectWallet();
+            });
+            this.setList.add(discWalletBtn);
+        }
+
+        let setBack = this.add.text(0, 155, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
               this.sound.play("buttonSound");
               this.tweens.add({ targets: this.setList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.settingsPopup.setVisible(false) });
           });
           
-        this.setList.add([this.walletText, setBack]);
+        this.setList.add(setBack);
         this.tweens.add({ targets: this.setList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
+    }
+
+    // --- NEW: DISCONNECT WALLET FUNCTION ---
+    async disconnectWallet() {
+        if (window.solana && window.solana.isPhantom) {
+            try {
+                await window.solana.disconnect();
+            } catch (err) { console.log(err); }
+        }
+        window.userWallet = null;
+        localStorage.removeItem('silentPath_wallet');
+        console.log("Phantom Wallet Disconnected");
+        this.showSettings(); // Refresh UI to remove the button
     }
 
     showShop() {
@@ -531,8 +557,6 @@ class MainMenu extends Phaser.Scene {
                 localStorage.setItem('silentPath_wallet', window.userWallet);
                 this.updateWalletButtonText();
 
-                // --- FIX 2: INSTANT WALLET SYNC ---
-                // Phantom connect hotay hi server ko foran update bhej dega
                 if (window.isLoggedIn && window.mongoId && typeof io !== 'undefined') {
                     const syncSocket = io();
                     syncSocket.emit('linkDiscordSession', window.mongoId);
@@ -543,6 +567,7 @@ class MainMenu extends Phaser.Scene {
                 }
 
                 alert("Wallet connected successfully!");
+                this.showSettings(); // Refresh UI to show disconnect button
             } catch (err) { console.log("Cancelled"); }
         } else { alert("Phantom Wallet not found!"); }
     }
