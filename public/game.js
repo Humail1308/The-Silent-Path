@@ -540,9 +540,12 @@ class GameScene extends Phaser.Scene {
         this.meters = 0; 
         this.orbScore = 0; 
         this.isGameOver = false; 
-        this.isPaused = false;
+        
+        // --- CHANGED: Game shuru hote hi pause rahegi instruction ke liye ---
+        this.isPaused = true; 
+        
         this.currentLevel = data.level || 1;
-        this.jumpCount = 0; // Track jumps for normal double jump
+        this.jumpCount = 0; 
     }
     preload() {
         this.load.spritesheet("playerRun", "assets/player_run.png", { frameWidth: 336, frameHeight: 543 });
@@ -568,7 +571,6 @@ class GameScene extends Phaser.Scene {
         if (this.socket) { this.socket.disconnect(); }
         this.socket = io(); 
         
-        // --- NEW: LINK SOCKET TO DISCORD USER ---
         if (window.isLoggedIn && window.mongoId) {
             this.socket.emit('linkDiscordSession', window.mongoId);
         }
@@ -591,7 +593,6 @@ class GameScene extends Phaser.Scene {
 
         this.socket.on('spawnObstacle', (data) => {
             if (this.isGameOver || this.isPaused) return;
-            // Obstacle speed control handles speed from server side.
             let obstacleSpeed = data.speed || 400;
             if (data.type === 'barrel') {
                 let barrel = this.obstacles.create(850, 425, "barrel");
@@ -617,7 +618,11 @@ class GameScene extends Phaser.Scene {
         if(!this.anims.exists('run')) {
             this.anims.create({ key: 'run', frames: this.anims.generateFrameNumbers('playerRun', { start: 0, end: 3 }), frameRate: 12, repeat: -1 });
         }
-        this.player.play('run');
+        
+        // --- CHANGED: Game paused hai, isiliye animation ruki hui hogi ---
+        this.player.anims.play('run');
+        this.player.anims.pause();
+        this.physics.pause();
 
         this.obstacles = this.physics.add.group();
         this.orbs = this.physics.add.group();
@@ -638,11 +643,58 @@ class GameScene extends Phaser.Scene {
         this.input.on('pointerdown', () => { if (!this.isPaused && !this.isGameOver) this.jump(); });
 
         this.createPauseMenu();
-        this.playLevelAnimation(1, "THE SILENT ASCENT");
+        
+        // --- NEW: INSTRUCTIONS POPUP CALL ---
+        this.showInstructionsPopup();
+    }
+
+    // --- NEW: INSTRUCTIONS MENU LOGIC ---
+    showInstructionsPopup() {
+        this.instructionOverlay = this.add.rectangle(400, 225, 800, 450, 0x000000, 0.7).setDepth(299).setInteractive(); 
+        this.instructionMenu = this.add.container(400, 225).setDepth(300).setScale(0.5).setAlpha(0);
+        
+        let scrollBg = this.add.image(0, 0, "parchment").setDisplaySize(550, 420);
+        let title = this.add.text(0, -150, "HOW TO PLAY", { fontSize: '32px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
+        
+        // Instructions Text
+        let bestExp = this.add.text(0, -100, "For best experience, play on PC/Laptop.", { fontSize: '16px', fill: '#ff4444', fontFamily: "Arial", fontWeight: 'bold', fontStyle: 'italic', resolution: 2 }).setOrigin(0.5);
+        
+        const txtStyle = { fontSize: '18px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', align: 'center', resolution: 2 };
+        
+        let pcControls = this.add.text(0, -40, "💻 PC CONTROLS:\n[UP Arrow] = Jump\n[UP Arrow] (x2) = Double Jump", txtStyle).setOrigin(0.5);
+        let mobControls = this.add.text(0, 30, "📱 MOBILE CONTROLS:\n[Tap Screen] = Jump\n[Tap Screen] (x2) = Double Jump", txtStyle).setOrigin(0.5);
+        
+        let orbTip = this.add.text(0, 100, "🔮 Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
+
+        // Start Crusade Button
+        let startBtn = this.add.text(0, 160, "START CRUSADE", { fontSize: '24px', fill: '#fff', backgroundColor: '#4a2c0a', padding: 8, fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        
+        startBtn.on('pointerover', () => { startBtn.setScale(1.1); startBtn.setStyle({fill: '#DAA520'}); });
+        startBtn.on('pointerout', () => { startBtn.setScale(1.0); startBtn.setStyle({fill: '#fff'}); });
+        startBtn.on('pointerdown', () => { 
+            this.sound.play("btnClick"); 
+            this.tweens.add({ 
+                targets: [this.instructionOverlay, this.instructionMenu], 
+                alpha: 0, 
+                duration: 400, 
+                onComplete: () => {
+                    this.instructionOverlay.destroy();
+                    this.instructionMenu.destroy();
+                    // --- GAME ASAL MEIN YAHAN START HOGI ---
+                    this.isPaused = false;
+                    this.physics.resume();
+                    this.player.anims.resume();
+                    this.socket.emit('resumeGame');
+                    this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
+                } 
+            });
+        });
+
+        this.instructionMenu.add([scrollBg, title, bestExp, pcControls, mobControls, orbTip, startBtn]);
+        this.tweens.add({ targets: this.instructionMenu, scale: 1, alpha: 1, duration: 500, ease: 'Back.easeOut' });
     }
 
     playLevelAnimation(levelNum, levelName) {
-        this.currentLevel = levelNum;
         this.levelTransitioning = true;
         let levelContainer = this.add.container(400, 225).setDepth(1000);
         let blackBar = this.add.rectangle(0, 0, 800, 120, 0x000000, 0.7).setScale(1, 0);
@@ -659,16 +711,12 @@ class GameScene extends Phaser.Scene {
     jump() {
         if (this.jumpCount < 2) {
             if (this.jumpCount === 0) {
-                // First Jump: Normal Height
                 this.player.setVelocityY(-850); 
             } else {
-                // Second Jump (Double Jump): Slightly smaller height
                 this.player.setVelocityY(-600); 
             }
-            
             this.sound.play("jumpSound", {volume: 0.3});
             this.socket.emit('jumpAction');
-            
             this.jumpCount++;
         }
     }
@@ -715,7 +763,6 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    // --- NEW: SYNCED BACKGROUND SCROLL SPEED ---
     update() {
         if (this.isGameOver || this.isPaused) return;
         
@@ -776,7 +823,6 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        // --- UPDATED: SHARE ON X BUTTON ---
         let shareBtn = createBtn(-35, "🐦 SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
         
         let restartBtn = createBtn(25, "RESTART CRUSADE", "#fff", "#444", () => { 
@@ -797,13 +843,10 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
-    // --- NEW: X INTENT SHARE FUNCTION ---
     shareToX(finalScore) {
-        // --- DHIYAN DEIN: YAHAN SE ?play=now HATA DIYA HAI ---
         const gameLink = "https://the-silent-path.onrender.com/"; 
         const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? Play now:`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
-        
         window.open(twitterUrl, '_blank');
     }
 
