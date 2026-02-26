@@ -656,7 +656,6 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    // --- NEW: UPDATED JUMP FUNCTION (DIFFERENT HEIGHTS) ---
     jump() {
         if (this.jumpCount < 2) {
             if (this.jumpCount === 0) {
@@ -720,7 +719,6 @@ class GameScene extends Phaser.Scene {
     update() {
         if (this.isGameOver || this.isPaused) return;
         
-        // Background ki speed ahista se start hogi aur server ki obstacles ke sath match karegi
         let currentScroll = 4.5 + (this.meters / 800); 
         this.bg.tilePositionX += currentScroll; 
         this.ground.tilePositionX += currentScroll;
@@ -799,11 +797,10 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
-   // --- NEW: X INTENT SHARE FUNCTION (Bypass Twitter Cache) ---
+    // --- NEW: X INTENT SHARE FUNCTION ---
     shareToX(finalScore) {
-        // DHIYAN DEIN: Link ke aage '?play=now' laga diya hai
-        const gameLink = "https://the-silent-path.onrender.com/?play=now"; 
-        
+        // --- DHIYAN DEIN: YAHAN SE ?play=now HATA DIYA HAI ---
+        const gameLink = "https://the-silent-path.onrender.com/"; 
         const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? Play now:`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
         
