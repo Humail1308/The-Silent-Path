@@ -678,10 +678,10 @@ class GameScene extends Phaser.Scene {
         
         const txtStyle = { fontSize: '18px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', align: 'center', resolution: 2 };
         
-        let pcControls = this.add.text(0, -40, "💻 PC CONTROLS:\n[UP Arrow] = Jump\n[UP Arrow] (x2) = Double Jump", txtStyle).setOrigin(0.5);
-        let mobControls = this.add.text(0, 30, "📱 MOBILE CONTROLS:\n[Tap Screen] = Jump\n[Tap Screen] (x2) = Double Jump", txtStyle).setOrigin(0.5);
+        let pcControls = this.add.text(0, -40, "PC CONTROLS:\n[UP Arrow] = Jump\n[UP Arrow] (x2) = Double Jump", txtStyle).setOrigin(0.5);
+        let mobControls = this.add.text(0, 30, "MOBILE CONTROLS:\n[Tap Screen] = Jump\n[Tap Screen] (x2) = Double Jump", txtStyle).setOrigin(0.5);
         
-        let orbTip = this.add.text(0, 100, "🔮 Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
+        let orbTip = this.add.text(0, 100, "Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
 
         // Start Crusade Button
         let startBtn = this.add.text(0, 160, "START CRUSADE", { fontSize: '24px', fill: '#fff', backgroundColor: '#4a2c0a', padding: 8, fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -843,7 +843,7 @@ class GameScene extends Phaser.Scene {
             return btn;
         };
 
-        let shareBtn = createBtn(-35, "🐦 SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
+        let shareBtn = createBtn(-35, "SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
         
         let restartBtn = createBtn(25, "RESTART CRUSADE", "#fff", "#444", () => { 
             this.sound.stopAll(); 
