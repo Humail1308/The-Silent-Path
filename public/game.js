@@ -799,9 +799,11 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
-    // --- NEW: X INTENT SHARE FUNCTION ---
+   // --- NEW: X INTENT SHARE FUNCTION (Bypass Twitter Cache) ---
     shareToX(finalScore) {
-        const gameLink = "https://the-silent-path.onrender.com"; 
+        // DHIYAN DEIN: Link ke aage '?play=now' laga diya hai
+        const gameLink = "https://the-silent-path.onrender.com/?play=now"; 
+        
         const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? Play now:`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
         
