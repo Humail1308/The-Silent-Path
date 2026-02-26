@@ -106,8 +106,6 @@ class MainMenu extends Phaser.Scene {
             fill: "#4a2c0a", // Red color
             fontFamily: "'MedievalSharp'", 
             fontWeight: 'bold',
-            stroke: '#000',
-            strokeThickness: 2,
             resolution: 2 
         }).setOrigin(0.5);
 
