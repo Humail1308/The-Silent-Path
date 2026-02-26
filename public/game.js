@@ -13,6 +13,9 @@ window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
 window.isLoggedIn = false;
 window.mongoId = null; // To link socket with DB
 
+// --- INSTRUCTIONS FLAG (Taake baar baar na aaye) ---
+window.hasSeenInstructions = false;
+
 // Global Music Reference
 window.currentMusic = null;
 
@@ -536,17 +539,19 @@ class MainMenu extends Phaser.Scene {
 // --- 2. GAME SCENE ---
 class GameScene extends Phaser.Scene {
     constructor() { super("GameScene"); }
+    
     init(data) { 
         this.meters = 0; 
         this.orbScore = 0; 
         this.isGameOver = false; 
         
-        // --- CHANGED: Game shuru hote hi pause rahegi instruction ke liye ---
-        this.isPaused = true; 
+        // --- CHANGED: Sirf first time game pause hogi instructions ke liye ---
+        this.isPaused = !window.hasSeenInstructions; 
         
         this.currentLevel = data.level || 1;
         this.jumpCount = 0; 
     }
+    
     preload() {
         this.load.spritesheet("playerRun", "assets/player_run.png", { frameWidth: 336, frameHeight: 543 });
         this.load.image("ground", "assets/ground.png"); 
@@ -559,6 +564,7 @@ class GameScene extends Phaser.Scene {
         this.load.audio("btnClick", "assets/button.mp3");
         this.load.audio("level1Music", "assets/level1_music.mp3");
     }
+    
     create() {
         manageBgVideo('stop');
         if (this.currentLevel === 1) {
@@ -576,6 +582,11 @@ class GameScene extends Phaser.Scene {
         }
         
         this.socket.emit('requestRestart');
+        
+        // --- NEW: Agar instructions dikhani hain, toh server ko bhi fauran rok do ---
+        if (this.isPaused) {
+            this.socket.emit('pauseGame');
+        }
 
         this.socket.on('serverUpdate', (data) => {
             if (!this.isGameOver && !this.isPaused) {
@@ -618,11 +629,13 @@ class GameScene extends Phaser.Scene {
         if(!this.anims.exists('run')) {
             this.anims.create({ key: 'run', frames: this.anims.generateFrameNumbers('playerRun', { start: 0, end: 3 }), frameRate: 12, repeat: -1 });
         }
+        this.player.play('run');
         
-        // --- CHANGED: Game paused hai, isiliye animation ruki hui hogi ---
-        this.player.anims.play('run');
-        this.player.anims.pause();
-        this.physics.pause();
+        // --- NEW: Agar paused hai toh animation aur physics rok do ---
+        if (this.isPaused) {
+            this.player.anims.pause();
+            this.physics.pause();
+        }
 
         this.obstacles = this.physics.add.group();
         this.orbs = this.physics.add.group();
@@ -644,8 +657,12 @@ class GameScene extends Phaser.Scene {
 
         this.createPauseMenu();
         
-        // --- NEW: INSTRUCTIONS POPUP CALL ---
-        this.showInstructionsPopup();
+        // --- NEW: Decide karega ke Instructions dikhani hain ya seedha Level start karna hai ---
+        if (!window.hasSeenInstructions) {
+            this.showInstructionsPopup();
+        } else {
+            this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
+        }
     }
 
     // --- NEW: INSTRUCTIONS MENU LOGIC ---
@@ -671,6 +688,8 @@ class GameScene extends Phaser.Scene {
         
         startBtn.on('pointerover', () => { startBtn.setScale(1.1); startBtn.setStyle({fill: '#DAA520'}); });
         startBtn.on('pointerout', () => { startBtn.setScale(1.0); startBtn.setStyle({fill: '#fff'}); });
+        
+        // --- BUTTON CLICK LOGIC (Game resumes exactly from 0m) ---
         startBtn.on('pointerdown', () => { 
             this.sound.play("btnClick"); 
             this.tweens.add({ 
@@ -680,11 +699,12 @@ class GameScene extends Phaser.Scene {
                 onComplete: () => {
                     this.instructionOverlay.destroy();
                     this.instructionMenu.destroy();
-                    // --- GAME ASAL MEIN YAHAN START HOGI ---
+                    
+                    window.hasSeenInstructions = true; // Aainda nahi dikhega
                     this.isPaused = false;
                     this.physics.resume();
                     this.player.anims.resume();
-                    this.socket.emit('resumeGame');
+                    this.socket.emit('resumeGame'); // Server ko start karne ka signal
                     this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
                 } 
             });
