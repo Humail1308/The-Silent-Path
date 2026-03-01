@@ -1,15 +1,14 @@
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
-const DiscordStrategy = require('passport-discord').Strategy; 
 const MongoStore = require('connect-mongo');
+const axios = require('axios'); // 🛠️ Manual API calls ke liye
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const mongoose = require('mongoose');
 
-// --- 0. NETWORK FIX (Render/Discord IPv6 Issue) ---
-// Force IPv4 for external API calls to avoid "Failed to obtain access token"
+// --- 0. NETWORK FIX ---
 require('dns').setDefaultResultOrder('ipv4first');
 
 // --- 1. CONFIGURATION ---
@@ -72,19 +71,47 @@ passport.deserializeUser(async (id, done) => {
     } catch (err) { done(err, null); }
 });
 
-// --- 4. DISCORD STRATEGY (Strategy Fix Applied) ---
-passport.use(new DiscordStrategy({
-    clientID: DISCORD_CLIENT_ID,
-    clientSecret: DISCORD_CLIENT_SECRET,
-    callbackURL: CALLBACK_URL,
-    scope: ['identify'],
-    // 🛠️ STRATEGY FIX: Added state and custom headers to bypass Cloudflare 1015
-    state: true,
-    customHeaders: {
-        'User-Agent': 'TheSilentPath-Game-Auth/1.0'
-    }
-}, async (accessToken, refreshToken, profile, done) => {
+// --- 4. MANUAL DISCORD AUTH LOGIC ---
+
+// Login Start: Redirect to Discord
+app.get('/auth/discord', (req, res) => {
+    const discordUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&response_type=code&scope=identify&prompt=consent`;
+    res.redirect(discordUrl);
+});
+
+// Callback: Handle Code Exchange & User Profile manually
+app.get('/auth/discord/callback', async (req, res) => {
+    const code = req.query.code;
+    if (!code) return res.redirect('/');
+
     try {
+        // 1. Exchange Code for Access Token
+        const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
+            client_id: DISCORD_CLIENT_ID,
+            client_secret: DISCORD_CLIENT_SECRET,
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: CALLBACK_URL,
+        }), {
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'TheSilentPath-ManualAuth/1.0'
+            }
+        });
+
+        const accessToken = tokenResponse.data.access_token;
+
+        // 2. Get User Profile using Access Token
+        const userResponse = await axios.get('https://discord.com/api/users/@me', {
+            headers: { 
+                Authorization: `Bearer ${accessToken}`,
+                'User-Agent': 'TheSilentPath-ManualAuth/1.0'
+            }
+        });
+
+        const profile = userResponse.data;
+
+        // 3. Find or Create User in DB
         let user = await Player.findOne({ discordId: profile.id });
         if (!user) {
             user = new Player({
@@ -95,33 +122,14 @@ passport.use(new DiscordStrategy({
                 totalOrbs: 0
             });
             await user.save();
-            console.log("🆕 New User Created:", profile.username);
+            console.log("🆕 New User Created via Manual Auth:", profile.username);
         } else {
             console.log("👋 Existing User Logged in:", profile.username);
         }
-        return done(null, user);
-    } catch (err) { 
-        console.error("❌ Strategy Error:", err);
-        return done(err, null); 
-    }
-}));
 
-// --- 5. AUTH ROUTES ---
-
-app.get('/auth/discord', passport.authenticate('discord', { prompt: 'consent' }));
-
-app.get('/auth/discord/callback', (req, res, next) => {
-    passport.authenticate('discord', (err, user, info) => {
-        if (err) {
-            console.error("🚨 DISCORD AUTH CRITICAL ERROR:", err);
-            return res.status(500).send(`Auth Failed. Error: ${err.message}. Check Server Logs.`);
-        }
-        if (!user) {
-            console.warn("⚠️ No user found/denied access:", info);
-            return res.redirect('/');
-        }
+        // 4. Manually Log In the user into Passport session
         req.logIn(user, (err) => {
-            if (err) return next(err);
+            if (err) throw err;
             return res.send(`
                 <script>
                     if (window.opener) {
@@ -133,7 +141,15 @@ app.get('/auth/discord/callback', (req, res, next) => {
                 </script>
             `);
         });
-    })(req, res, next);
+
+    } catch (error) {
+        console.error("🚨 MANUAL AUTH ERROR:", error.response ? error.response.data : error.message);
+        res.status(500).send(`
+            <h3>Discord is blocking the connection (Error 429/1015).</h3>
+            <p>Please wait 5-10 minutes and try again. This is a temporary limit on Render's network.</p>
+            <a href="/">Back to Game</a>
+        `);
+    }
 });
 
 app.get('/auth/logout', (req, res, next) => {
