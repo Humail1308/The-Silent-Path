@@ -162,11 +162,7 @@ class MainMenu extends Phaser.Scene {
 
         // --- MENU BUTTONS ---
         createParchmentButton(400, 160, "START GAME", () => {
-            if (!window.isLoggedIn) {
-                alert("Please Connect Discord Account first in Settings!");
-                this.showSettings();
-                return;
-            }
+            // UPDATED: Discord login check hata diya gaya hai! Ab koi bhi direct play kar sakta hai.
             this.sound.stopAll(); // Stop Menu Music
             manageBgVideo('stop'); // Stop HTML Video
             this.scene.start("GameScene", { meters: 0, orbs: 0 });
