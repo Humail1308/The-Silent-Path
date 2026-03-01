@@ -72,12 +72,17 @@ passport.deserializeUser(async (id, done) => {
     } catch (err) { done(err, null); }
 });
 
-// --- 4. DISCORD STRATEGY (With Detailed Logging) ---
+// --- 4. DISCORD STRATEGY (Strategy Fix Applied) ---
 passport.use(new DiscordStrategy({
     clientID: DISCORD_CLIENT_ID,
     clientSecret: DISCORD_CLIENT_SECRET,
     callbackURL: CALLBACK_URL,
-    scope: ['identify']
+    scope: ['identify'],
+    // 🛠️ STRATEGY FIX: Added state and custom headers to bypass Cloudflare 1015
+    state: true,
+    customHeaders: {
+        'User-Agent': 'TheSilentPath-Game-Auth/1.0'
+    }
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         let user = await Player.findOne({ discordId: profile.id });
@@ -101,16 +106,14 @@ passport.use(new DiscordStrategy({
     }
 }));
 
-// --- 5. AUTH ROUTES (With Debugging Middleware) ---
+// --- 5. AUTH ROUTES ---
 
 app.get('/auth/discord', passport.authenticate('discord', { prompt: 'consent' }));
 
-// 🛠️ Updated Callback with manual error catching
 app.get('/auth/discord/callback', (req, res, next) => {
     passport.authenticate('discord', (err, user, info) => {
         if (err) {
             console.error("🚨 DISCORD AUTH CRITICAL ERROR:", err);
-            // Agar token fail hua toh ye message browser pe dikhega
             return res.status(500).send(`Auth Failed. Error: ${err.message}. Check Server Logs.`);
         }
         if (!user) {
