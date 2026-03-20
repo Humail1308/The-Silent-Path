@@ -889,7 +889,7 @@ class GameScene extends Phaser.Scene {
     }
 
     shareToX(finalScore) {
-        const gameLink = "https://the-silent-path.onrender.com/"; 
+        const gameLink = "https://the-silent-path-ona68.ondigitalocean.app/"; 
         const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? @silencecrusade #SR2C\n\nPlay now:`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
         window.open(twitterUrl, '_blank');

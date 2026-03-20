@@ -15,7 +15,7 @@ require('dns').setDefaultResultOrder('ipv4first');
 const MONGO_URI = "mongodb+srv://admin:gamepass123@cluster0.vt2bcgt.mongodb.net/?appName=Cluster0";
 const DISCORD_CLIENT_ID = "1477311047353503944"; 
 const DISCORD_CLIENT_SECRET = "9bvHNV85Krb5VKskOp6Ns8My3xN1qHyX"; 
-const CALLBACK_URL = "https://the-silent-path.onrender.com/auth/discord/callback";
+const CALLBACK_URL = "https://the-silent-path-ona68.ondigitalocean.app/auth/discord/callback";
 
 // --- 2. DATABASE CONNECTION ---
 mongoose.connect(MONGO_URI)
