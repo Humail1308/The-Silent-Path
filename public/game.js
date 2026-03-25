@@ -211,15 +211,16 @@ class MainMenu extends Phaser.Scene {
     }
 
     async connectWallet() {
+        // 1. Check karte hain ke Phantom browser mein install hai ya nahi
         if (window.solana && window.solana.isPhantom) {
             try {
-                if (window.solana.isConnected) { await window.solana.disconnect(); }
+                // 2. Direct connect ki request bhejen (Puraani disconnect line hata di hai)
                 const resp = await window.solana.connect();
                 window.userWallet = resp.publicKey.toString();
                 localStorage.setItem('silentPath_wallet', window.userWallet);
                 this.updateWalletButtonText();
 
-                // Sync data with backend
+                // 3. Backend se data sync karein
                 if (typeof io !== 'undefined') {
                     const syncSocket = io();
                     syncSocket.emit('linkWallet', window.userWallet);
@@ -227,12 +228,19 @@ class MainMenu extends Phaser.Scene {
                         window.totalOrbs = data.totalOrbs;
                         localStorage.setItem('silentPath_orbs', window.totalOrbs);
                         setTimeout(() => syncSocket.disconnect(), 1000);
-                        alert("Wallet Linked! Progress Restored.");
+                        alert("✅ Phantom Wallet Linked! Progress Restored.");
                     });
                 }
                 this.showSettings(); 
-            } catch (err) { console.log("Cancelled"); }
-        } else { alert("Phantom Wallet not found!"); }
+            } catch (err) { 
+                console.log("Connection Error:", err);
+                alert("❌ Connection Cancelled! Please approve the Phantom popup."); 
+            }
+        } else { 
+            // 4. Agar Phantom install nahi hai (Ya mobile par aam browser use ho raha hai)
+            alert("⚠️ Phantom Wallet not found! Please install it from phantom.app (Use PC/Laptop for best experience)."); 
+            window.open("https://phantom.app/", "_blank");
+        }
     }
 
     async disconnectWallet() {
