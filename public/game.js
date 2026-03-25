@@ -121,7 +121,6 @@ class MainMenu extends Phaser.Scene {
 
         this.createPopupContainers();
         
-        // Auto-link wallet on menu load if already connected
         if (window.userWallet && typeof io !== 'undefined') {
             const socket = io();
             socket.emit('linkWallet', window.userWallet);
@@ -159,12 +158,36 @@ class MainMenu extends Phaser.Scene {
         if (this.walletText) {
             if (window.userWallet) {
                 this.walletText.setText(`WALLET: ${window.userWallet.substring(0,4)}...${window.userWallet.substring(window.userWallet.length-4)}`);
-                this.walletText.setStyle({ backgroundColor: '#00aa00' }); // Green when connected
+                this.walletText.setStyle({ backgroundColor: '#00aa00' }); 
             } else {
                 this.walletText.setText("CONNECT PHANTOM");
-                this.walletText.setStyle({ backgroundColor: '#9945FF' }); // Purple when disconnected
+                this.walletText.setStyle({ backgroundColor: '#9945FF' }); 
             }
         }
+    }
+
+    // --- NEW: THE MAGIC TRUSTED CLICK FIX ---
+    triggerTrustedConnection() {
+        let overlay = document.createElement('div');
+        overlay.id = 'phantom-trusted-click';
+        Object.assign(overlay.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            zIndex: '9999', cursor: 'pointer', backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', 
+            color: '#DAA520', fontFamily: "'MedievalSharp', serif", textAlign: 'center'
+        });
+        overlay.innerHTML = `
+            <div style="background: #2e1a05; padding: 40px; border: 4px solid #DAA520; border-radius: 10px; box-shadow: 0px 0px 20px #000;">
+                <p style="font-size: 32px; margin: 0 0 15px 0;">🛡️ SECURE CONNECTION 🛡️</p>
+                <p style="color: white; font-size: 20px; margin: 0;">Game engines require native browser clicks.<br><br><b>Click anywhere inside this box to open Phantom</b></p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener('click', async () => {
+            document.body.removeChild(overlay);
+            await this.connectWallet(); 
+        });
     }
 
     showSettings() {
@@ -184,8 +207,14 @@ class MainMenu extends Phaser.Scene {
             this.soundStatus.setText(this.sound.mute ? "SOUND: OFF" : "SOUND: ON");
         });
 
-        // WALLET CONNECT BUTTON
-        this.walletText = this.add.text(0, -10, "", { fontSize: '20px', fill: '#ffffff', padding: 10, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
+        // WALLET CONNECT BUTTON UPDATE
+        this.walletText = this.add.text(0, -10, "", { fontSize: '20px', fill: '#ffffff', padding: 10, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
+        this.walletText.on('pointerdown', () => { 
+            this.sound.play("buttonSound"); 
+            if (!window.userWallet) {
+                this.triggerTrustedConnection(); // Calls the fix!
+            }
+        });
         this.updateWalletButtonText();
 
         this.setList.add([setTitle, this.soundStatus, this.walletText]);
@@ -211,16 +240,13 @@ class MainMenu extends Phaser.Scene {
     }
 
     async connectWallet() {
-        // 1. Check karte hain ke Phantom browser mein install hai ya nahi
         if (window.solana && window.solana.isPhantom) {
             try {
-                // 2. Direct connect ki request bhejen (Puraani disconnect line hata di hai)
                 const resp = await window.solana.connect();
                 window.userWallet = resp.publicKey.toString();
                 localStorage.setItem('silentPath_wallet', window.userWallet);
                 this.updateWalletButtonText();
 
-                // 3. Backend se data sync karein
                 if (typeof io !== 'undefined') {
                     const syncSocket = io();
                     syncSocket.emit('linkWallet', window.userWallet);
@@ -234,11 +260,16 @@ class MainMenu extends Phaser.Scene {
                 this.showSettings(); 
             } catch (err) { 
                 console.log("Connection Error:", err);
+                
+                // Unstick Phantom logic
+                window.userWallet = null;
+                localStorage.removeItem('silentPath_wallet');
+                this.updateWalletButtonText();
+                
                 alert("❌ Connection Cancelled! Please approve the Phantom popup."); 
             }
         } else { 
-            // 4. Agar Phantom install nahi hai (Ya mobile par aam browser use ho raha hai)
-            alert("⚠️ Phantom Wallet not found! Please install it from phantom.app (Use PC/Laptop for best experience)."); 
+            alert("⚠️ Phantom Wallet not found! Please install it from phantom.app"); 
             window.open("https://phantom.app/", "_blank");
         }
     }
@@ -250,7 +281,6 @@ class MainMenu extends Phaser.Scene {
         window.userWallet = null;
         localStorage.removeItem('silentPath_wallet');
         
-        // Reset progress visually
         window.totalOrbs = 0;
         localStorage.setItem('silentPath_orbs', 0);
         
@@ -422,7 +452,6 @@ class MainMenu extends Phaser.Scene {
                     let rowStyle = { fontSize: '16px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 };
                     this.lbList.add(this.add.text(-185, y, `${i+1}`, rowStyle).setOrigin(0.5));
                     
-                    // Format Wallet Address
                     let displayWallet = entry.walletAddress ? `${entry.walletAddress.substring(0, 6)}...${entry.walletAddress.substring(entry.walletAddress.length-4)}` : "Anonymous";
                     this.lbList.add(this.add.text(-115, y, displayWallet, { fontSize: '15px', fill: '#4b0082', fontFamily: 'monospace', fontWeight: 'bold', resolution: 2 }).setOrigin(0, 0.5));
                     this.lbList.add(this.add.text(125, y, `${entry.score}m`, rowStyle).setOrigin(1, 0.5));
@@ -471,7 +500,6 @@ class GameScene extends Phaser.Scene {
         if (this.socket) { this.socket.disconnect(); }
         this.socket = io(); 
         
-        // Link socket with wallet immediately
         if (window.userWallet) {
             this.socket.emit('linkWallet', window.userWallet);
         }
@@ -697,7 +725,6 @@ class GameScene extends Phaser.Scene {
         });
         menuBtn.on('pointerover', () => menuBtn.setScale(1.1).setStyle({fill: '#DAA520'})); menuBtn.on('pointerout', () => menuBtn.setScale(1).setStyle({fill: '#5e3e1a'}));
 
-        // WARNING IF NOT CONNECTED
         if(!window.userWallet) {
             let warnTxt = this.add.text(0, 185, "⚠️ Score not saved! Connect Phantom Wallet.", { fontSize: '16px', fill: '#ff4444', fontFamily: "Arial", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
             goContainer.add(warnTxt);
