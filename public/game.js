@@ -1,25 +1,11 @@
 // Global variables
-window.playerID = localStorage.getItem('silentPath_id') || 'id_' + Math.random().toString(36).substr(2, 9);
-localStorage.setItem('silentPath_id', window.playerID);
-
-window.playerName = localStorage.getItem('silentPath_name') || "Anonymous Knight";
 window.userWallet = localStorage.getItem('silentPath_wallet') || null; 
-window.personalBest = parseInt(localStorage.getItem('silentPath_pb')) || 0; 
-
-// --- TOTAL ORBS TRACKING (Saved in LocalStorage) ---
 window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
-
-// --- DISCORD AUTH GLOBALS ---
-window.isLoggedIn = false;
-window.mongoId = null; // To link socket with DB
-
-// --- INSTRUCTIONS FLAG (Taake baar baar na aaye) ---
+window.personalBest = parseInt(localStorage.getItem('silentPath_pb')) || 0; 
 window.hasSeenInstructions = false;
-
-// Global Music Reference
 window.currentMusic = null;
 
-// --- HELPER FUNCTION: HTML BACKGROUND VIDEO (HD Quality Fix) ---
+// --- HELPER FUNCTION: HTML BACKGROUND VIDEO ---
 function manageBgVideo(action) {
     const vidId = 'bg-cinematic-video';
     let vidElement = document.getElementById(vidId);
@@ -31,10 +17,9 @@ function manageBgVideo(action) {
             vidElement.src = 'assets/menu_cinematic.mp4?v=2';
             vidElement.autoplay = true;
             vidElement.loop = true;
-            vidElement.muted = true; // Muted visual only (Music handles audio)
+            vidElement.muted = true; 
             vidElement.playsInline = true;
             
-            // CSS to make it Full Screen HD Background
             Object.assign(vidElement.style, {
                 position: 'fixed',
                 top: '50%',
@@ -43,7 +28,7 @@ function manageBgVideo(action) {
                 minHeight: '100%',
                 width: 'auto',
                 height: 'auto',
-                zIndex: '-1', // Behind the game
+                zIndex: '-1', 
                 transform: 'translate(-50%, -50%)',
                 objectFit: 'cover'
             });
@@ -65,7 +50,6 @@ class MainMenu extends Phaser.Scene {
         this.load.audio("menuMusic", "assets/music.mp3");
         this.load.audio("buttonSound", "assets/button.mp3");
         
-        // UI Assets
         this.load.image("parchment", "assets/parchment.png");
         this.load.image("outfitOrange", "assets/outfit_orange.png");
         this.load.image("outfitShadow", "assets/outfit_shadow.png");
@@ -73,10 +57,8 @@ class MainMenu extends Phaser.Scene {
         this.load.image("thumbLevel1", "assets/city_bg.png"); 
     }
     create() {
-        // --- START HTML BACKGROUND VIDEO ---
         manageBgVideo('play');
 
-        // --- MUSIC LOGIC ---
         this.sound.stopAll(); 
         if (!this.sound.get("menuMusic")) {
             this.music = this.sound.add("menuMusic", { loop: true, volume: 0.3 });
@@ -86,152 +68,69 @@ class MainMenu extends Phaser.Scene {
             this.music.play();
         }
 
-        // --- TITLE WITH PARCHMENT SCROLL ---
-        this.add.image(400, 70, "parchment")
-            .setDisplaySize(650, 100)
-            .setAlpha(1);
+        this.add.image(400, 70, "parchment").setDisplaySize(650, 100).setAlpha(1);
 
         this.add.text(400, 55, "THE SILENT PATH", {
-            fontSize: "55px", 
-            fill: "#4a2c0a",
-            fontFamily: "'MedievalSharp'", 
-            fontWeight: 'bold',
-            resolution: 2 
+            fontSize: "55px", fill: "#4a2c0a", fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 
         }).setOrigin(0.5);
 
         this.add.text(400, 95, "[ BETA VERSION ]", {
-            fontSize: "18px", 
-            fill: "#ff4444", 
-            fontFamily: "'MedievalSharp'", 
-            fontWeight: 'bold',
-            stroke: '#000',
-            strokeThickness: 2,
-            resolution: 2 
+            fontSize: "18px", fill: "#ff4444", fontFamily: "'MedievalSharp'", fontWeight: 'bold', stroke: '#000', strokeThickness: 2, resolution: 2 
         }).setOrigin(0.5);
 
-        // --- AUTH: CHECK LOGIN STATUS ---
-        this.checkLoginStatus();
-
-        // --- AUTH LISTENER (Pop-up se message sunne ke liye) ---
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'AUTH_SUCCESS') {
-                this.handleAuthSuccess(event.data.user);
-            }
-        });
-
-        // --- CUSTOM BUTTON CREATOR FUNCTION ---
         const createParchmentButton = (x, y, text, callback, width = 320) => {
             let container = this.add.container(x, y);
-
-            let bg = this.add.image(0, 0, "parchment")
-                .setDisplaySize(width, 55)
-                .setInteractive({ useHandCursor: true });
-
-            let txt = this.add.text(0, 0, text, {
-                fontSize: '24px',
-                fill: '#4a2c0a',
-                fontFamily: "'MedievalSharp'",
-                fontWeight: 'bold',
-                resolution: 2
-            }).setOrigin(0.5);
-
+            let bg = this.add.image(0, 0, "parchment").setDisplaySize(width, 55).setInteractive({ useHandCursor: true });
+            let txt = this.add.text(0, 0, text, { fontSize: '24px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
             container.add([bg, txt]);
 
             bg.on('pointerover', () => {
                 if (this.isPopupOpen()) return;
-                bg.setTint(0xffeedd); 
-                container.setScale(1.05);
-                txt.setStyle({ fill: '#DAA520', stroke: '#000', strokeThickness: 1 });
+                bg.setTint(0xffeedd); container.setScale(1.05); txt.setStyle({ fill: '#DAA520', stroke: '#000', strokeThickness: 1 });
             });
-
-            bg.on('pointerout', () => {
-                bg.clearTint();
-                container.setScale(1);
-                txt.setStyle({ fill: '#4a2c0a', strokeThickness: 0 }); 
-            });
-
+            bg.on('pointerout', () => { bg.clearTint(); container.setScale(1); txt.setStyle({ fill: '#4a2c0a', strokeThickness: 0 }); });
             bg.on('pointerdown', () => {
                 if (this.isPopupOpen()) return;
-                this.sound.play("buttonSound");
-                container.setScale(0.95);
-                if (callback) callback();
+                this.sound.play("buttonSound"); container.setScale(0.95); if (callback) callback();
             });
-
             bg.on('pointerup', () => { container.setScale(1.05); });
         };
 
         // --- MENU BUTTONS ---
         createParchmentButton(400, 160, "START GAME", () => {
-            // UPDATED: Discord login check hata diya gaya hai! Ab koi bhi direct play kar sakta hai.
-            this.sound.stopAll(); // Stop Menu Music
-            manageBgVideo('stop'); // Stop HTML Video
+            this.sound.stopAll(); 
+            manageBgVideo('stop'); 
             this.scene.start("GameScene", { meters: 0, orbs: 0 });
         });
 
-        createParchmentButton(400, 225, "SETTINGS", () => {
-            this.showSettings();
-        });
-
-        createParchmentButton(400, 290, "THE SILENT ARMORY", () => {
-            this.showShop();
-        });
-
-        createParchmentButton(400, 355, "WORLD MAPS", () => {
-            this.showMaps();
-        });
+        createParchmentButton(400, 225, "SETTINGS", () => { this.showSettings(); });
+        createParchmentButton(400, 290, "THE SILENT ARMORY", () => { this.showShop(); });
+        createParchmentButton(400, 355, "WORLD MAPS", () => { this.showMaps(); });
 
         let lbContainer = this.add.container(750, 400);
         let lbBg = this.add.image(0, 0, "parchment").setDisplaySize(70, 70).setInteractive({ useHandCursor: true });
         let lbIcon = this.add.text(0, 0, "🏆", { fontSize: '40px', resolution: 2 }).setOrigin(0.5);
-        
         lbContainer.add([lbBg, lbIcon]);
 
         lbBg.on('pointerover', () => { if(this.isPopupOpen()) return; lbContainer.setScale(1.1); });
         lbBg.on('pointerout', () => { lbContainer.setScale(1); });
         lbBg.on('pointerdown', () => { 
             if(this.isPopupOpen()) return;
-            this.sound.play("buttonSound");
-            this.showLeaderboard(); 
+            this.sound.play("buttonSound"); this.showLeaderboard(); 
         });
 
         this.createPopupContainers();
-    }
-
-    checkLoginStatus() {
-        fetch('/auth/user').then(res => res.json()).then(user => {
-            if(user) this.handleAuthSuccess(user);
-        }).catch(err => console.log("Not logged in"));
-    }
-
-    handleAuthSuccess(user) {
-        window.isLoggedIn = true;
-        window.mongoId = user._id; 
-        window.playerName = user.username;
-        window.totalOrbs = user.totalOrbs;
-        window.personalBest = user.score;
         
-        if (user.wallet && user.wallet.trim() !== "") {
-            window.userWallet = user.wallet;
-            localStorage.setItem('silentPath_wallet', window.userWallet);
+        // Auto-link wallet on menu load if already connected
+        if (window.userWallet && typeof io !== 'undefined') {
+            const socket = io();
+            socket.emit('linkWallet', window.userWallet);
+            socket.once('syncData', (data) => {
+                window.totalOrbs = data.totalOrbs;
+                localStorage.setItem('silentPath_orbs', window.totalOrbs);
+                socket.disconnect();
+            });
         }
-        
-        if (this.settingsPopup && this.settingsPopup.visible) {
-            this.showSettings(); 
-        }
-        console.log("Logged in as:", window.playerName);
-    }
-
-    disconnectDiscord() {
-        fetch('/auth/logout').then(() => {
-            window.isLoggedIn = false;
-            window.mongoId = null;
-            window.playerName = "Anonymous Knight";
-            window.personalBest = 0;
-            window.totalOrbs = parseInt(localStorage.getItem('silentPath_orbs')) || 0;
-            
-            console.log("Disconnected Discord Account.");
-            this.showSettings(); // Refresh UI
-        }).catch(err => console.log(err));
     }
 
     createPopupContainers() {
@@ -254,16 +153,16 @@ class MainMenu extends Phaser.Scene {
         this.lbPopup.add([this.add.rectangle(400, 225, 800, 450, 0x000000, 0.1).setInteractive(), this.lbList]);
     }
 
-    isPopupOpen() {
-        return (this.lbPopup.visible || this.settingsPopup.visible || this.shopPopup.visible || this.mapsPopup.visible);
-    }
+    isPopupOpen() { return (this.lbPopup.visible || this.settingsPopup.visible || this.shopPopup.visible || this.mapsPopup.visible); }
 
     updateWalletButtonText() {
         if (this.walletText) {
             if (window.userWallet) {
-                this.walletText.setText(`WALLET: ${window.userWallet.substring(0,6)}...`);
+                this.walletText.setText(`WALLET: ${window.userWallet.substring(0,4)}...${window.userWallet.substring(window.userWallet.length-4)}`);
+                this.walletText.setStyle({ backgroundColor: '#00aa00' }); // Green when connected
             } else {
                 this.walletText.setText("CONNECT PHANTOM");
+                this.walletText.setStyle({ backgroundColor: '#9945FF' }); // Purple when disconnected
             }
         }
     }
@@ -274,62 +173,35 @@ class MainMenu extends Phaser.Scene {
         this.setList.setScale(0.5);
         this.setList.setAlpha(0);
 
-        let scrollBg = this.add.image(0, 0, "parchment").setDisplaySize(500, 420);
+        let scrollBg = this.add.image(0, 0, "parchment").setDisplaySize(450, 380);
         this.setList.add(scrollBg);
 
-        let setTitle = this.add.text(0, -150, "SETTINGS", { fontSize: '30px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
+        let setTitle = this.add.text(0, -130, "SETTINGS", { fontSize: '30px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
         
-        this.soundStatus = this.add.text(0, -90, this.sound.mute ? "SOUND: OFF" : "SOUND: ON", { fontSize: '22px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.soundStatus = this.add.text(0, -70, this.sound.mute ? "SOUND: OFF" : "SOUND: ON", { fontSize: '22px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.soundStatus.on('pointerdown', () => {
-            this.sound.play("buttonSound");
-            this.sound.mute = !this.sound.mute;
+            this.sound.play("buttonSound"); this.sound.mute = !this.sound.mute;
             this.soundStatus.setText(this.sound.mute ? "SOUND: OFF" : "SOUND: ON");
         });
 
-        let discordStatusText = window.isLoggedIn ? `CONNECTED: ${window.playerName}` : "CONNECT DISCORD";
-        let discordColor = window.isLoggedIn ? '#00aa00' : '#5865F2'; 
-        
-        let discordBtn = this.add.text(0, -35, discordStatusText, { fontSize: '20px', fill: '#ffffff', backgroundColor: discordColor, padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
-        
-        discordBtn.on('pointerdown', () => {
-            if (!window.isLoggedIn) {
-                this.sound.play("buttonSound");
-                window.open('/auth/discord', 'discord_auth_popup', 'width=500,height=700');
-            }
-        });
-        
-        this.setList.add([setTitle, this.soundStatus, discordBtn]);
-
-        if (window.isLoggedIn) {
-            let disconnectBtn = this.add.text(0, 5, "DISCONNECT ACCOUNT", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
-            
-            disconnectBtn.on('pointerover', () => disconnectBtn.setScale(1.05));
-            disconnectBtn.on('pointerout', () => disconnectBtn.setScale(1));
-            disconnectBtn.on('pointerdown', () => {
-                this.sound.play("buttonSound");
-                this.disconnectDiscord();
-            });
-            this.setList.add(disconnectBtn);
-        }
-
-        this.walletText = this.add.text(0, 50, "", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#9945FF', padding: 8, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
+        // WALLET CONNECT BUTTON
+        this.walletText = this.add.text(0, -10, "", { fontSize: '20px', fill: '#ffffff', padding: 10, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { this.sound.play("buttonSound"); this.connectWallet(); });
         this.updateWalletButtonText();
-        this.setList.add(this.walletText);
 
-        // --- NEW: WALLET DISCONNECT BUTTON ---
+        this.setList.add([setTitle, this.soundStatus, this.walletText]);
+
+        // WALLET DISCONNECT BUTTON
         if (window.userWallet) {
-            let discWalletBtn = this.add.text(0, 95, "DISCONNECT WALLET", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
-            
+            let discWalletBtn = this.add.text(0, 45, "DISCONNECT WALLET", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
             discWalletBtn.on('pointerover', () => discWalletBtn.setScale(1.05));
             discWalletBtn.on('pointerout', () => discWalletBtn.setScale(1));
             discWalletBtn.on('pointerdown', () => {
-                this.sound.play("buttonSound");
-                this.disconnectWallet();
+                this.sound.play("buttonSound"); this.disconnectWallet();
             });
             this.setList.add(discWalletBtn);
         }
 
-        let setBack = this.add.text(0, 155, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        let setBack = this.add.text(0, 120, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
               this.sound.play("buttonSound");
               this.tweens.add({ targets: this.setList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.settingsPopup.setVisible(false) });
           });
@@ -338,17 +210,44 @@ class MainMenu extends Phaser.Scene {
         this.tweens.add({ targets: this.setList, scale: 1, alpha: 1, duration: 800, ease: 'Cubic.easeOut' });
     }
 
-    // --- NEW: DISCONNECT WALLET FUNCTION ---
-    async disconnectWallet() {
+    async connectWallet() {
         if (window.solana && window.solana.isPhantom) {
             try {
-                await window.solana.disconnect();
-            } catch (err) { console.log(err); }
+                if (window.solana.isConnected) { await window.solana.disconnect(); }
+                const resp = await window.solana.connect();
+                window.userWallet = resp.publicKey.toString();
+                localStorage.setItem('silentPath_wallet', window.userWallet);
+                this.updateWalletButtonText();
+
+                // Sync data with backend
+                if (typeof io !== 'undefined') {
+                    const syncSocket = io();
+                    syncSocket.emit('linkWallet', window.userWallet);
+                    syncSocket.once('syncData', (data) => {
+                        window.totalOrbs = data.totalOrbs;
+                        localStorage.setItem('silentPath_orbs', window.totalOrbs);
+                        setTimeout(() => syncSocket.disconnect(), 1000);
+                        alert("Wallet Linked! Progress Restored.");
+                    });
+                }
+                this.showSettings(); 
+            } catch (err) { console.log("Cancelled"); }
+        } else { alert("Phantom Wallet not found!"); }
+    }
+
+    async disconnectWallet() {
+        if (window.solana && window.solana.isPhantom) {
+            try { await window.solana.disconnect(); } catch (err) { console.log(err); }
         }
         window.userWallet = null;
         localStorage.removeItem('silentPath_wallet');
-        console.log("Phantom Wallet Disconnected");
-        this.showSettings(); // Refresh UI to remove the button
+        
+        // Reset progress visually
+        window.totalOrbs = 0;
+        localStorage.setItem('silentPath_orbs', 0);
+        
+        console.log("Wallet Disconnected");
+        this.showSettings(); 
     }
 
     showShop() {
@@ -361,11 +260,7 @@ class MainMenu extends Phaser.Scene {
         this.shopList.add(scrollBg);
 
         let shopTitle = this.add.text(0, -150, "THE SILENT ARMORY", { fontSize: '30px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
-        
-        let orbDisplay = this.add.text(0, -115, `🔮 ORBS: ${window.totalOrbs}`, { 
-            fontSize: '20px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 
-        }).setOrigin(0.5);
-        
+        let orbDisplay = this.add.text(0, -115, `🔮 ORBS: ${window.totalOrbs}`, { fontSize: '20px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
         this.shopList.add([shopTitle, orbDisplay]);
 
         const outfits = [
@@ -400,8 +295,7 @@ class MainMenu extends Phaser.Scene {
 
         this.shopList.add([leftArrow, rightArrow]);
         let shopBack = this.add.text(0, 160, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-            this.sound.play("buttonSound");
-            this.tweens.add({ targets: this.shopList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.shopPopup.setVisible(false) });
+            this.sound.play("buttonSound"); this.tweens.add({ targets: this.shopList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.shopPopup.setVisible(false) });
         });
         this.shopList.add(shopBack);
         updateOutfitView(0, 'right');
@@ -418,11 +312,7 @@ class MainMenu extends Phaser.Scene {
         this.mapsList.add(scrollBg);
 
         let mapTitle = this.add.text(0, -160, "THE KNOWN LANDS", { fontSize: '32px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
-        
-        let orbDisplay = this.add.text(0, -125, `🔮 ORBS: ${window.totalOrbs}`, { 
-            fontSize: '20px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 
-        }).setOrigin(0.5);
-
+        let orbDisplay = this.add.text(0, -125, `🔮 ORBS: ${window.totalOrbs}`, { fontSize: '20px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
         this.mapsList.add([mapTitle, orbDisplay]);
 
         const levels = [
@@ -442,7 +332,6 @@ class MainMenu extends Phaser.Scene {
             let frame = this.add.graphics();
             frame.lineStyle(4, 0x4a2c0a);
             frame.strokeRect(-120, -70, 240, 140);
-            
             let levelImg = this.add.image(0, 0, lvl.img).setDisplaySize(232, 132);
             
             if (lvl.locked) {
@@ -455,22 +344,18 @@ class MainMenu extends Phaser.Scene {
                 sliderContainer.add([levelImg, frame, playTag]);
                 
                 levelImg.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-                    this.sound.play("buttonSound");
-                    this.sound.stopAll(); 
-                    manageBgVideo('stop'); 
+                    this.sound.play("buttonSound"); this.sound.stopAll(); manageBgVideo('stop'); 
                     this.scene.start("GameScene", { level: lvl.id });
                 });
             }
 
             let nameTxt = this.add.text(0, 90, lvl.name, { fontSize: '24px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
             sliderContainer.add(nameTxt);
-
             sliderContainer.x = direction === 'right' ? 100 : -100;
             sliderContainer.alpha = 0;
             this.tweens.add({ targets: sliderContainer, x: 0, alpha: 1, duration: 300, ease: 'Power2' });
 
-            leftArrow.setVisible(index > 0);
-            rightArrow.setVisible(index < levels.length - 1);
+            leftArrow.setVisible(index > 0); rightArrow.setVisible(index < levels.length - 1);
         };
 
         let arrowStyle = { fontSize: '60px', fill: '#4a2c0a', fontFamily: 'serif', fontWeight: 'bold', resolution: 2 };
@@ -481,10 +366,8 @@ class MainMenu extends Phaser.Scene {
         rightArrow.on('pointerdown', () => { if (currentIndex < levels.length - 1) { this.sound.play("buttonSound"); currentIndex++; updateLevelView(currentIndex, 'right'); } });
 
         this.mapsList.add([leftArrow, rightArrow]);
-
         let closeBtn = this.add.text(0, 160, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-            this.sound.play("buttonSound");
-            this.tweens.add({ targets: this.mapsList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.mapsPopup.setVisible(false) });
+            this.sound.play("buttonSound"); this.tweens.add({ targets: this.mapsList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => this.mapsPopup.setVisible(false) });
         });
         this.mapsList.add(closeBtn);
 
@@ -507,9 +390,8 @@ class MainMenu extends Phaser.Scene {
 
         const headerStyle = { fontSize: '18px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 };
         this.lbList.add(this.add.text(-185, -110, "RANK", headerStyle).setOrigin(0.5));
-        this.lbList.add(this.add.text(-115, -110, "CRUSADER", headerStyle).setOrigin(0, 0.5));
-        this.lbList.add(this.add.text(65, -110, "DISTANCE", headerStyle).setOrigin(1, 0.5));
-        this.lbList.add(this.add.text(110, -110, "SEAL", headerStyle).setOrigin(0, 0.5));
+        this.lbList.add(this.add.text(-115, -110, "WALLET", headerStyle).setOrigin(0, 0.5)); 
+        this.lbList.add(this.add.text(125, -110, "DISTANCE", headerStyle).setOrigin(1, 0.5));
 
         let line = this.add.graphics();
         line.lineStyle(2, 0x4a2c0a, 0.4);
@@ -517,8 +399,7 @@ class MainMenu extends Phaser.Scene {
         this.lbList.add(line);
 
         let lbClose = this.add.text(0, 160, "CLOSE", { fontSize: '24px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 3, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { 
-            this.sound.play("buttonSound");
-            this.tweens.add({ targets: this.lbList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => { this.lbPopup.setVisible(false); } });
+            this.sound.play("buttonSound"); this.tweens.add({ targets: this.lbList, scale: 0.7, alpha: 0, duration: 400, ease: 'Cubic.easeIn', onComplete: () => { this.lbPopup.setVisible(false); } });
         });
         this.lbList.add(lbClose);
 
@@ -532,40 +413,15 @@ class MainMenu extends Phaser.Scene {
                     let y = i * 32 - 60; 
                     let rowStyle = { fontSize: '16px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 };
                     this.lbList.add(this.add.text(-185, y, `${i+1}`, rowStyle).setOrigin(0.5));
-                    let displayName = entry.name ? entry.name : entry.username;
-                    if(displayName.length > 10) displayName = displayName.substring(0, 9) + "..";
-                    this.lbList.add(this.add.text(-115, y, displayName, rowStyle).setOrigin(0, 0.5));
-                    this.lbList.add(this.add.text(55, y, `${entry.score}m`, rowStyle).setOrigin(1, 0.5));
-                    let walletShort = entry.wallet ? `${entry.wallet.substring(0, 4)}...${entry.wallet.substring(entry.wallet.length-4)}` : "NONE";
-                    this.lbList.add(this.add.text(110, y, walletShort, { fontSize: '11px', fill: '#4b0082', fontFamily: 'monospace', resolution: 2 }).setOrigin(0, 0.5));
+                    
+                    // Format Wallet Address
+                    let displayWallet = entry.walletAddress ? `${entry.walletAddress.substring(0, 6)}...${entry.walletAddress.substring(entry.walletAddress.length-4)}` : "Anonymous";
+                    this.lbList.add(this.add.text(-115, y, displayWallet, { fontSize: '15px', fill: '#4b0082', fontFamily: 'monospace', fontWeight: 'bold', resolution: 2 }).setOrigin(0, 0.5));
+                    this.lbList.add(this.add.text(125, y, `${entry.score}m`, rowStyle).setOrigin(1, 0.5));
                 });
                 tempSocket.disconnect();
             });
         }
-    }
-
-    async connectWallet() {
-        if (window.solana && window.solana.isPhantom) {
-            try {
-                if (window.solana.isConnected) { await window.solana.disconnect(); }
-                const resp = await window.solana.connect();
-                window.userWallet = resp.publicKey.toString();
-                localStorage.setItem('silentPath_wallet', window.userWallet);
-                this.updateWalletButtonText();
-
-                if (window.isLoggedIn && window.mongoId && typeof io !== 'undefined') {
-                    const syncSocket = io();
-                    syncSocket.emit('linkDiscordSession', window.mongoId);
-                    syncSocket.once('syncData', () => {
-                        syncSocket.emit('saveLeaderboardScore', { wallet: window.userWallet });
-                        setTimeout(() => syncSocket.disconnect(), 1000);
-                    });
-                }
-
-                alert("Wallet connected successfully!");
-                this.showSettings(); // Refresh UI to show disconnect button
-            } catch (err) { console.log("Cancelled"); }
-        } else { alert("Phantom Wallet not found!"); }
     }
 }
 
@@ -577,9 +433,7 @@ class GameScene extends Phaser.Scene {
         this.meters = 0; 
         this.orbScore = 0; 
         this.isGameOver = false; 
-        
         this.isPaused = !window.hasSeenInstructions; 
-        
         this.currentLevel = data.level || 1;
         this.jumpCount = 0; 
     }
@@ -609,15 +463,13 @@ class GameScene extends Phaser.Scene {
         if (this.socket) { this.socket.disconnect(); }
         this.socket = io(); 
         
-        if (window.isLoggedIn && window.mongoId) {
-            this.socket.emit('linkDiscordSession', window.mongoId);
+        // Link socket with wallet immediately
+        if (window.userWallet) {
+            this.socket.emit('linkWallet', window.userWallet);
         }
         
         this.socket.emit('requestRestart');
-        
-        if (this.isPaused) {
-            this.socket.emit('pauseGame');
-        }
+        if (this.isPaused) this.socket.emit('pauseGame');
 
         this.socket.on('serverUpdate', (data) => {
             if (!this.isGameOver && !this.isPaused) {
@@ -662,10 +514,7 @@ class GameScene extends Phaser.Scene {
         }
         this.player.play('run');
         
-        if (this.isPaused) {
-            this.player.anims.pause();
-            this.physics.pause();
-        }
+        if (this.isPaused) { this.player.anims.pause(); this.physics.pause(); }
 
         this.obstacles = this.physics.add.group();
         this.orbs = this.physics.add.group();
@@ -687,11 +536,8 @@ class GameScene extends Phaser.Scene {
 
         this.createPauseMenu();
         
-        if (!window.hasSeenInstructions) {
-            this.showInstructionsPopup();
-        } else {
-            this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
-        }
+        if (!window.hasSeenInstructions) { this.showInstructionsPopup(); } 
+        else { this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT"); }
     }
 
     showInstructionsPopup() {
@@ -700,14 +546,11 @@ class GameScene extends Phaser.Scene {
         
         let scrollBg = this.add.image(0, 0, "parchment").setDisplaySize(550, 420);
         let title = this.add.text(0, -150, "HOW TO PLAY", { fontSize: '32px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
-        
         let bestExp = this.add.text(0, -100, "For best experience, play on PC/Laptop.", { fontSize: '16px', fill: '#ff4444', fontFamily: "Arial", fontWeight: 'bold', fontStyle: 'italic', resolution: 2 }).setOrigin(0.5);
         
         const txtStyle = { fontSize: '18px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', align: 'center', resolution: 2 };
-        
         let pcControls = this.add.text(0, -40, "💻 PC CONTROLS:\n[UP Arrow] = Jump\n[UP Arrow] (x2) = Double Jump", txtStyle).setOrigin(0.5);
         let mobControls = this.add.text(0, 30, "📱 MOBILE CONTROLS:\n[Tap Screen] = Jump\n[Tap Screen] (x2) = Double Jump", txtStyle).setOrigin(0.5);
-        
         let orbTip = this.add.text(0, 100, "🔮 Collect Orbs to unlock exclusive items!", { fontSize: '18px', fill: '#4b0082', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
 
         let startBtn = this.add.text(0, 160, "START CRUSADE", { fontSize: '24px', fill: '#fff', backgroundColor: '#4a2c0a', padding: 8, fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 2, resolution: 2 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -718,19 +561,12 @@ class GameScene extends Phaser.Scene {
         startBtn.on('pointerdown', () => { 
             this.sound.play("btnClick"); 
             this.tweens.add({ 
-                targets: [this.instructionOverlay, this.instructionMenu], 
-                alpha: 0, 
-                duration: 400, 
+                targets: [this.instructionOverlay, this.instructionMenu], alpha: 0, duration: 400, 
                 onComplete: () => {
-                    this.instructionOverlay.destroy();
-                    this.instructionMenu.destroy();
-                    
-                    window.hasSeenInstructions = true; 
-                    this.isPaused = false;
-                    this.physics.resume();
-                    this.player.anims.resume();
-                    this.socket.emit('resumeGame'); 
-                    this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
+                    this.instructionOverlay.destroy(); this.instructionMenu.destroy();
+                    window.hasSeenInstructions = true; this.isPaused = false;
+                    this.physics.resume(); this.player.anims.resume();
+                    this.socket.emit('resumeGame'); this.playLevelAnimation(this.currentLevel, "THE SILENT ASCENT");
                 } 
             });
         });
@@ -748,18 +584,12 @@ class GameScene extends Phaser.Scene {
         levelContainer.add([blackBar, txt1, txt2]);
         this.tweens.add({ targets: blackBar, scaleY: 1, duration: 500, ease: 'Power2' });
         this.tweens.add({ targets: [txt1, txt2], alpha: 1, duration: 800, delay: 500 });
-        this.time.delayedCall(3000, () => {
-            this.tweens.add({ targets: levelContainer, alpha: 0, duration: 1000, onComplete: () => { levelContainer.destroy(); } });
-        });
+        this.time.delayedCall(3000, () => { this.tweens.add({ targets: levelContainer, alpha: 0, duration: 1000, onComplete: () => { levelContainer.destroy(); } }); });
     }
 
     jump() {
         if (this.jumpCount < 2) {
-            if (this.jumpCount === 0) {
-                this.player.setVelocityY(-850); 
-            } else {
-                this.player.setVelocityY(-600); 
-            }
+            if (this.jumpCount === 0) { this.player.setVelocityY(-850); } else { this.player.setVelocityY(-600); }
             this.sound.play("jumpSound", {volume: 0.3});
             this.socket.emit('jumpAction');
             this.jumpCount++;
@@ -773,20 +603,13 @@ class GameScene extends Phaser.Scene {
         let title = this.add.text(0, -110, "CRUSADE PAUSED", { fontSize: '32px', fill: '#4a2c0a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
         const btnStyle = { fontSize: '22px', fill: '#2e1a05', fontFamily: "'MedievalSharp'", fontWeight: 'bold', padding: 10, resolution: 2 };
         const addHoverEffect = (btn) => { btn.on('pointerover', () => { btn.setStyle({ fill: '#DAA520' }); btn.setScale(1.1); }); btn.on('pointerout', () => { btn.setStyle({ fill: '#2e1a05' }); btn.setScale(1.0); }); };
+        
         let resumeBtn = this.add.text(0, -30, "CONTINUE", btnStyle).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.sound.play("btnClick"); this.togglePause(); }); addHoverEffect(resumeBtn);
-        
         let restartBtn = this.add.text(0, 30, "RESTART", btnStyle).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { 
-            this.sound.play("btnClick"); 
-            this.sound.stopAll(); 
-            this.socket.emit('requestRestart'); 
-            this.scene.restart(); 
+            this.sound.play("btnClick"); this.sound.stopAll(); this.socket.emit('requestRestart'); this.scene.restart(); 
         }); addHoverEffect(restartBtn);
-        
         let menuBtn = this.add.text(0, 90, "MAIN MENU", btnStyle).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => { 
-            this.sound.play("btnClick"); 
-            this.socket.emit('playerDied'); 
-            this.sound.stopAll(); 
-            this.scene.start("MainMenu"); 
+            this.sound.play("btnClick"); this.socket.emit('playerDied'); this.sound.stopAll(); this.scene.start("MainMenu"); 
         }); addHoverEffect(menuBtn);
         
         this.pauseMenu.add([scrollBg, title, resumeBtn, restartBtn, menuBtn]);
@@ -796,9 +619,7 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isPaused = !this.isPaused;
         if (this.isPaused) {
-            this.physics.pause(); 
-            this.player.anims.pause();
-            this.socket.emit('pauseGame'); 
+            this.physics.pause(); this.player.anims.pause(); this.socket.emit('pauseGame'); 
             this.pauseOverlay.setVisible(true); this.tweens.add({ targets: this.pauseOverlay, alpha: 1, duration: 300 });
             this.pauseMenu.setVisible(true); this.tweens.add({ targets: this.pauseMenu, scale: 1, alpha: 1, duration: 500, ease: 'Cubic.easeOut' });
         } else {
@@ -812,31 +633,21 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver || this.isPaused) return;
         
         let currentScroll = 4.5 + (this.meters / 800); 
-        this.bg.tilePositionX += currentScroll; 
-        this.ground.tilePositionX += currentScroll;
+        this.bg.tilePositionX += currentScroll; this.ground.tilePositionX += currentScroll;
         
         let onGround = this.player.body.touching.down;
-        
-        if (onGround) {
-            this.jumpCount = 0;
-        }
-
+        if (onGround) { this.jumpCount = 0; }
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) { this.jump(); }
         
-        if (!onGround) { 
-            this.player.anims.stop(); 
-            this.player.setFrame(1); 
-        } else if (!this.player.anims.isPlaying) { 
-            this.player.play('run'); 
-        }
+        if (!onGround) { this.player.anims.stop(); this.player.setFrame(1); 
+        } else if (!this.player.anims.isPlaying) { this.player.play('run'); }
         
         this.obstacles.getChildren().forEach(obs => { if(obs.x < -100) obs.destroy(); });
         this.orbs.getChildren().forEach(orb => { if(orb.x < -100) orb.destroy(); });
     }
 
     collectOrb(player, orb) {
-        orb.destroy();
-        this.sound.play("collectSound", {volume: 0.4});
+        orb.destroy(); this.sound.play("collectSound", {volume: 0.4});
         window.totalOrbs += 10;
         localStorage.setItem('silentPath_orbs', window.totalOrbs);
         this.socket.emit('orbCollected'); 
@@ -846,7 +657,7 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isGameOver = true;
         
-        this.socket.emit('saveLeaderboardScore', { wallet: window.userWallet });
+        this.socket.emit('saveLeaderboardScore'); 
         this.socket.emit('playerDied'); 
         
         this.physics.pause(); this.sound.play("deathSound", {volume: 0.2});
@@ -869,27 +680,27 @@ class GameScene extends Phaser.Scene {
         };
 
         let shareBtn = createBtn(-25, "🐦 SHARE SCORE ON X", "#fff", "#000000", () => { this.shareToX(this.meters); });
-        
         let restartBtn = createBtn(45, "RESTART CRUSADE", "#fff", "#444", () => { 
-            this.sound.stopAll(); 
-            this.socket.emit('requestRestart'); 
-            this.scene.restart(); 
+            this.sound.stopAll(); this.socket.emit('requestRestart'); this.scene.restart(); 
         });
 
         let menuBtn = this.add.text(0, 130, "RETURN TO MAIN MENU", { fontSize: '18px', fill: '#5e3e1a', fontFamily: "'MedievalSharp'", fontWeight: 'bold', resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5).on('pointerdown', () => { 
-            this.sound.play("btnClick"); 
-            this.socket.emit('playerDied'); 
-            this.sound.stopAll(); 
-            this.scene.start("MainMenu"); 
+            this.sound.play("btnClick"); this.socket.emit('playerDied'); this.sound.stopAll(); this.scene.start("MainMenu"); 
         });
         menuBtn.on('pointerover', () => menuBtn.setScale(1.1).setStyle({fill: '#DAA520'})); menuBtn.on('pointerout', () => menuBtn.setScale(1).setStyle({fill: '#5e3e1a'}));
+
+        // WARNING IF NOT CONNECTED
+        if(!window.userWallet) {
+            let warnTxt = this.add.text(0, 185, "⚠️ Score not saved! Connect Phantom Wallet.", { fontSize: '16px', fill: '#ff4444', fontFamily: "Arial", fontWeight: 'bold', resolution: 2 }).setOrigin(0.5);
+            goContainer.add(warnTxt);
+        }
 
         goContainer.add([scrollBg, title, scoreResult, shareBtn, restartBtn, menuBtn]);
         this.tweens.add({ targets: goContainer, scale: 1, alpha: 1, duration: 600, ease: 'Back.easeOut' });
     }
 
     shareToX(finalScore) {
-        const gameLink = "https://the-silent-path-ona68.ondigitalocean.app/"; 
+        const gameLink = "https://the-silent-path-ona68.ondigitalocean.app/?ref=web3"; 
         const tweetText = `I just survived ${finalScore}m in The Silent Path! ⚔️🛡️\n\nCan you beat my score? @silencecrusade #SR2C\n\nPlay now:`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(gameLink)}`;
         window.open(twitterUrl, '_blank');
@@ -897,20 +708,9 @@ class GameScene extends Phaser.Scene {
 }
 
 const config = {
-    type: Phaser.AUTO,
-    width: 800,
-    height: 450,
-    backgroundColor: 'rgba(0,0,0,0)', 
-    transparent: true,
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
-    },
-    resolution: window.devicePixelRatio || 2, 
-    render: {
-        pixelArt: false,
-        antialias: true
-    },
+    type: Phaser.AUTO, width: 800, height: 450, backgroundColor: 'rgba(0,0,0,0)', transparent: true,
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    resolution: window.devicePixelRatio || 2, render: { pixelArt: false, antialias: true },
     physics: { default: "arcade", arcade: { gravity: { y: 1900 }, debug: false } },
     scene: [MainMenu, GameScene]
 };
