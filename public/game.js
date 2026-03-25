@@ -43,6 +43,67 @@ function manageBgVideo(action) {
     }
 }
 
+// --- 0. INTRO SCENE (CINEMATIC STORY) ---
+class IntroScene extends Phaser.Scene {
+    constructor() { super("IntroScene"); }
+
+    create() {
+        // 1. HTML Video Element banayen
+        const vidId = 'intro-cinematic-video';
+        let vidElement = document.createElement('video');
+        vidElement.id = vidId;
+        vidElement.src = 'assets/Cinematic Movie Game.mp4'; // 🎬 Yahan video ka sahi naam laazmi check karna!
+        vidElement.autoplay = true;
+        vidElement.controls = false;
+        vidElement.playsInline = true;
+        
+        // 2. Responsive Full Screen CSS (Har screen par cover karega)
+        Object.assign(vidElement.style, {
+            position: 'fixed', top: '0', left: '0', 
+            width: '100vw', height: '100vh',
+            backgroundColor: 'black', zIndex: '9998', 
+            objectFit: 'cover' 
+        });
+        document.body.appendChild(vidElement);
+
+        // 3. Skip Button (Medieval Style)
+        let skipBtn = document.createElement('div');
+        skipBtn.innerHTML = "SKIP CINEMATIC ➔";
+        Object.assign(skipBtn.style, {
+            position: 'fixed', bottom: '30px', right: '30px', zIndex: '9999',
+            color: '#DAA520', fontFamily: "'MedievalSharp', serif", fontSize: '20px',
+            cursor: 'pointer', background: 'rgba(46, 26, 5, 0.8)', padding: '10px 20px',
+            border: '2px solid #DAA520', borderRadius: '5px',
+            textShadow: '2px 2px 4px #000', fontWeight: 'bold'
+        });
+        document.body.appendChild(skipBtn);
+
+        // 4. Function: Video khatam ho ya Skip dabaye toh Main Menu par le jao
+        const finishIntro = () => {
+            if (vidElement) vidElement.remove();
+            if (skipBtn) skipBtn.remove();
+            this.scene.start("MainMenu"); 
+        };
+
+        vidElement.onended = finishIntro;
+        skipBtn.onclick = finishIntro;
+        
+        // 5. Browser Autoplay Policy Handle (Bohot Zaroori!)
+        let playPromise = vidElement.play();
+        if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+                console.log("Autoplay blocked by browser. Waiting for user interaction.");
+                skipBtn.innerHTML = "CLICK TO PLAY STORY ▶";
+                skipBtn.onclick = () => {
+                    vidElement.play();
+                    skipBtn.innerHTML = "SKIP CINEMATIC ➔";
+                    skipBtn.onclick = finishIntro;
+                };
+            });
+        }
+    }
+}
+
 // --- 1. MAIN MENU SCENE ---
 class MainMenu extends Phaser.Scene {
     constructor() { super("MainMenu"); }
@@ -166,7 +227,7 @@ class MainMenu extends Phaser.Scene {
         }
     }
 
-    // --- NEW: THE MAGIC TRUSTED CLICK FIX ---
+    // --- MAGIC TRUSTED CLICK FIX ---
     triggerTrustedConnection() {
         let overlay = document.createElement('div');
         overlay.id = 'phantom-trusted-click';
@@ -207,19 +268,17 @@ class MainMenu extends Phaser.Scene {
             this.soundStatus.setText(this.sound.mute ? "SOUND: OFF" : "SOUND: ON");
         });
 
-        // WALLET CONNECT BUTTON UPDATE
         this.walletText = this.add.text(0, -10, "", { fontSize: '20px', fill: '#ffffff', padding: 10, fontFamily: "'MedievalSharp'", resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
         this.walletText.on('pointerdown', () => { 
             this.sound.play("buttonSound"); 
             if (!window.userWallet) {
-                this.triggerTrustedConnection(); // Calls the fix!
+                this.triggerTrustedConnection(); 
             }
         });
         this.updateWalletButtonText();
 
         this.setList.add([setTitle, this.soundStatus, this.walletText]);
 
-        // WALLET DISCONNECT BUTTON
         if (window.userWallet) {
             let discWalletBtn = this.add.text(0, 45, "DISCONNECT WALLET", { fontSize: '14px', fill: '#ff4444', fontFamily: "'MedievalSharp'", stroke: '#000', strokeThickness: 1, resolution: 2 }).setInteractive({ useHandCursor: true }).setOrigin(0.5);
             discWalletBtn.on('pointerover', () => discWalletBtn.setScale(1.05));
@@ -260,12 +319,9 @@ class MainMenu extends Phaser.Scene {
                 this.showSettings(); 
             } catch (err) { 
                 console.log("Connection Error:", err);
-                
-                // Unstick Phantom logic
                 window.userWallet = null;
                 localStorage.removeItem('silentPath_wallet');
                 this.updateWalletButtonText();
-                
                 alert("❌ Connection Cancelled! Please approve the Phantom popup."); 
             }
         } else { 
@@ -747,6 +803,8 @@ const config = {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     resolution: window.devicePixelRatio || 2, render: { pixelArt: false, antialias: true },
     physics: { default: "arcade", arcade: { gravity: { y: 1900 }, debug: false } },
-    scene: [MainMenu, GameScene]
+    
+    // 👇 IntroScene Yahan Pehle Number Par Hai 👇
+    scene: [IntroScene, MainMenu, GameScene]
 };
 const game = new Phaser.Game(config);
